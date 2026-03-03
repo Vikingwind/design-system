@@ -23,35 +23,45 @@ export type ExpandablePanelProps = {
   unmountOnClose?: boolean;
   [key: string]: any;
 };
-export const ExpandablePanel: React.FC<ExpandablePanelProps> = ({
-  defaultOpen = false,
-  open: controlledOpen,
-  onToggle,
-  contentStyle,
-  unmountOnClose,
-  ...rest
-}) => {
-  const randomId = useRandomId('eds-expandable');
+export const ExpandablePanel = React.forwardRef<
+  HTMLDivElement,
+  ExpandablePanelProps
+>(
+  (
+    {
+      defaultOpen = false,
+      open: controlledOpen,
+      onToggle,
+      contentStyle,
+      unmountOnClose,
+      ...rest
+    },
+    ref,
+  ) => {
+    const randomId = useRandomId('eds-expandable');
 
-  const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
-  const isControlled = controlledOpen !== undefined;
-  const isOpen = isControlled ? controlledOpen : internalOpen;
+    const [internalOpen, setInternalOpen] =
+      React.useState<boolean>(defaultOpen);
+    const isControlled = controlledOpen !== undefined;
+    const isOpen = isControlled ? controlledOpen : internalOpen;
 
-  const handleToggle = () => {
-    if (!isControlled) {
-      setInternalOpen(prev => !prev);
-    }
-    onToggle?.();
-  };
+    const handleToggle = () => {
+      if (!isControlled) {
+        setInternalOpen(prev => !prev);
+      }
+      onToggle?.();
+    };
 
-  return (
-    <BaseExpandablePanel
-      id={randomId}
-      open={isOpen}
-      onToggle={handleToggle}
-      contentStyle={contentStyle}
-      unmountOnClose={unmountOnClose}
-      {...rest}
-    />
-  );
-};
+    return (
+      <BaseExpandablePanel
+        ref={ref}
+        id={randomId}
+        open={isOpen}
+        onToggle={handleToggle}
+        contentStyle={contentStyle}
+        unmountOnClose={unmountOnClose}
+        {...rest}
+      />
+    );
+  },
+);

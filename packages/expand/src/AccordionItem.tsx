@@ -21,25 +21,34 @@ export type AccordionItemProps = {
   unmountOnClose?: boolean;
   [key: string]: any;
 };
-export const AccordionItem: React.FC<AccordionItemProps> = ({
-  defaultOpen = false,
-  id: overrideId,
-  contentStyle,
-  unmountOnClose,
-  ...rest
-}) => {
-  const randomId = useRandomId('eds-accordion-item');
-  const id = overrideId || randomId;
-  const { isOpen, toggle } = useAccordion({ id, defaultOpen });
+export const AccordionItem = React.forwardRef<
+  HTMLDivElement,
+  AccordionItemProps
+>(
+  (
+    {
+      defaultOpen = false,
+      id: overrideId,
+      contentStyle,
+      unmountOnClose,
+      ...rest
+    },
+    ref,
+  ) => {
+    const randomId = useRandomId('eds-accordion-item');
+    const id = overrideId || randomId;
+    const { isOpen, toggle } = useAccordion({ id, defaultOpen });
 
-  return (
-    <BaseExpandablePanel
-      {...rest}
-      contentStyle={contentStyle}
-      id={id}
-      onToggle={toggle}
-      open={isOpen}
-      unmountOnClose={unmountOnClose}
-    />
-  );
-};
+    return (
+      <BaseExpandablePanel
+        ref={ref}
+        {...rest}
+        contentStyle={contentStyle}
+        id={id}
+        onToggle={toggle}
+        open={isOpen}
+        unmountOnClose={unmountOnClose}
+      />
+    );
+  },
+);
