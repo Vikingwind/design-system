@@ -1,0 +1,14 @@
+{
+  "name": "Entur illustrasjon",
+  "id": "entur-illustrasjon-prototype",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "devAllowedDomains": ["http://localhost:7317"],
+    "reasoning": "Pluginen snakker bare med en lokal bro på brukerens egen Mac (tools/figma-illustrasjon/bridge). Broen lager utkastet med bildemodellen, sporer det i Illustrator og sender SVG-ene tilbake. Pluginen sender ingenting til andre domener."
+  }
+}

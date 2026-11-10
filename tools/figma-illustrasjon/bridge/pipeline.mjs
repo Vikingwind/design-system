@@ -1,0 +1,564 @@
+// One illustration job: style references → draft (fal.ai) → optional review
+// and edit rounds (Claude) → trace in Illustrator with the skill's script.
+
+import { execFile, execFileSync, spawn } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import { FAL_PRICE, dataUri, falImage } from './fal.mjs';
+import { generationPrompt, reviewBrief } from './prompt.mjs';
+import { reviewDraft } from './review.mjs';
+
+const CATEGORIES = { animal: ['Animals'], person: ['People', 'Entur staff'] };
+// SKILL.md Step 4b: the references to start from for each kind.
+const DEFAULT_REFERENCES = {
+  animal: ['Dog', 'Rabbit', 'Squirrel', 'Sheep'],
+  person: [
+    'Woman holding package',
+    'Man checking the time',
+    'Man and woman hugging',
+    'Woman walking with luggage',
+  ],
+};
+export const MAX_EDIT_ROUNDS = 2;
+
+// File names in the library vary (Sheep-darkmode, Kitty_Dark, Hamster_default,
+// Dog-1): pick by what the name contains, shortest name first.
+function pick(files, { background, mode }) {
+  return files
+    .filter(file => {
+      const n = file.toLowerCase();
+      const m = n.includes('contrast')
+        ? 'contrast'
+        : n.includes('dark')
+        ? 'darkmode'
+        : 'standard';
+      return m === mode && n.includes('background') === background;
+    })
+    .sort((a, b) => a.length - b.length)[0];
+}
+
+function listDir(dir) {
+  return fs.existsSync(dir) ? fs.readdirSync(dir) : [];
+}
+
+export function listReferences(libraryDir, kind) {
+  const motifs = [];
+  for (const category of CATEGORIES[kind] || []) {
+    for (const motif of listDir(path.join(libraryDir, category)).sort()) {
+      const pngDir = path.join(libraryDir, category, motif, 'PNG');
+      const pngs = listDir(pngDir).filter(f => f.endsWith('.png'));
+      const plain = pick(pngs, { background: false, mode: 'standard' });
+      if (!plain) continue;
+      const withDisc = pick(pngs, { background: true, mode: 'standard' });
+      motifs.push({
+        id: `${category}/${motif}`,
+        name: category === 'Entur staff' ? `${motif} staff` : motif,
+        category,
+        thumb: `${category}/${motif}/PNG/${plain}`,
+        png: `${category}/${motif}/PNG/${
+          kind === 'animal' && withDisc ? withDisc : plain
+        }`,
+        isDefault: DEFAULT_REFERENCES[kind].includes(motif),
+      });
+    }
+  }
+  return motifs;
+}
+
+// The library's three SVG modes of a motif, for comparison in Figma.
+function librarySvgs(libraryDir, id, background) {
+  const dir = path.join(libraryDir, id, 'SVG');
+  const svgs = listDir(dir).filter(f => f.endsWith('.svg'));
+  const out = {};
+  for (const mode of ['standard', 'darkmode', 'contrast']) {
+    const file =
+      pick(svgs, { background, mode }) ||
+      pick(svgs, { background: !background, mode });
+    if (!file) return null;
+    out[mode] = cleanSvg(fs.readFileSync(path.join(dir, file), 'latin1'));
+  }
+  return out;
+}
+
+// Illustrator's export carries an XML prolog and XMP metadata Figma does not need.
+function cleanSvg(svg) {
+  return svg
+    .replace(/<\?xml[^>]*\?>/g, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<metadata>[\s\S]*?<\/metadata>/g, '')
+    .trim();
+}
+
+// Words left out when the name comes from the description.
+const FILLER = /^(en|et|ei|som|og|i|på|a|an|the|that|who|and|in|on)$/i;
+
+function safeName(name, scene) {
+  const words = scene.split(/\s+/).filter(w => !FILLER.test(w));
+  const base = (name || words.slice(0, 3).join(' '))
+    .replace(/æ/g, 'ae')
+    .replace(/ø/g, 'o')
+    .replace(/å/g, 'a')
+    .replace(/Æ/g, 'Ae')
+    .replace(/Ø/g, 'O')
+    .replace(/Å/g, 'A')
+    .replace(/[^A-Za-z0-9 _-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
+  return base || 'Illustrasjon';
+}
+
+function stamp() {
+  return new Date()
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace('T', '-')
+    .slice(0, 15);
+}
+
+// The trace script decodes 8-bit RGB(A), non-interlaced PNGs only (for the underlay mask).
+function traceablePng(bytes) {
+  const sig = '89504e470d0a1a0a';
+  if (bytes.subarray(0, 8).toString('hex') !== sig) return false;
+  const depth = bytes[24];
+  const type = bytes[25];
+  const interlace = bytes[28];
+  return depth === 8 && (type === 2 || type === 6) && interlace === 0;
+}
+
+function sipsToPng(input, output, maxSize) {
+  const args = ['-s', 'format', 'png'];
+  if (maxSize) args.push('-Z', String(maxSize));
+  execFileSync('sips', [...args, input, '--out', output], { stdio: 'ignore' });
+}
+
+// A Linje draft is mostly white or transparent paper and a pale disc; a photo
+// has almost none. Measured on a 64 px BMP from sips, which needs no PNG decoder.
+function paperShare(file, dir) {
+  const bmp = path.join(dir, 'kontroll.bmp');
+  execFileSync(
+    'sips',
+    ['-s', 'format', 'bmp', '-Z', '64', file, '--out', bmp],
+    {
+      stdio: 'ignore',
+    },
+  );
+  const b = fs.readFileSync(bmp);
+  fs.rmSync(bmp);
+  const offset = b.readUInt32LE(10);
+  const width = b.readInt32LE(18);
+  const height = Math.abs(b.readInt32LE(22));
+  const bytes = b.readUInt16LE(28) / 8;
+  const stride = Math.ceil((width * bytes) / 4) * 4;
+  let paper = 0;
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      const i = offset + y * stride + x * bytes;
+      const clear = bytes === 4 && b[i + 3] < 20;
+      if (clear || (b[i] >= 225 && b[i + 1] >= 225 && b[i + 2] >= 225)) paper++;
+    }
+  return paper / (width * height);
+}
+
+function checkDraft(file, dir) {
+  const out = execFileSync(
+    'sips',
+    ['-g', 'pixelWidth', '-g', 'pixelHeight', file],
+    {
+      encoding: 'utf8',
+    },
+  );
+  const [w, h] = [/pixelWidth: (\d+)/, /pixelHeight: (\d+)/].map(r =>
+    Number(out.match(r)[1]),
+  );
+  if (Math.abs(w / h - 1) > 0.05)
+    throw new Error(
+      `Utkastet er ${w} × ${h} px. Tracen trenger et kvadratisk utkast, ellers blir motivet strukket.`,
+    );
+  if (paperShare(file, dir) < 0.3)
+    throw new Error(
+      'Bildet ser ut som et foto, ikke et strekutkast i Linje-stil. Lag utkastet i Figma med prompten først, og spor det. Et foto kan bare gi motiv og positur, gjennom fal.ai.',
+    );
+}
+
+export function illustratorRunning(app) {
+  try {
+    execFileSync('pgrep', ['-f', `${app}/Contents/MacOS/`], {
+      stdio: 'ignore',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function loadReferences(config, kind, ids) {
+  const all = listReferences(config.libraryDir, kind);
+  const chosen = ids?.length
+    ? ids
+    : all.filter(m => m.isDefault).map(m => m.id);
+  const references = chosen
+    .map(id => all.find(m => m.id === id))
+    .filter(Boolean)
+    .slice(0, 4)
+    .map(m => ({
+      ...m,
+      bytes: fs.readFileSync(path.join(config.libraryDir, m.png)),
+    }));
+  if (references.length < 2) throw new Error('Velg minst to stilreferanser');
+  return references;
+}
+
+export function figmaPrompt(config, { kind, description, peach }) {
+  return generationPrompt(config.skillDir, {
+    kind,
+    scene: description,
+    peach,
+    references: false,
+  });
+}
+
+// One review of a draft made outside the bridge (Figma's image generation):
+// the edit prompt is for a tool that takes the draft alone.
+export async function reviewOnce(config, input) {
+  if (!config.anthropicApiKey)
+    throw new Error('Anthropic-nøkkelen mangler i config-fila');
+  if (!input.image?.data) throw new Error('Legg ved utkastet');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'entur-illustrasjon-'));
+  try {
+    const original = path.join(tmp, 'utkast');
+    fs.writeFileSync(original, Buffer.from(input.image.data, 'base64'));
+    const png = path.join(tmp, 'utkast.png');
+    sipsToPng(original, png, 2048);
+    const verdict = await reviewDraft({
+      apiKey: config.anthropicApiKey,
+      baseUrl: config.anthropicBaseUrl,
+      model: config.reviewModel,
+      brief: reviewBrief(config.skillDir),
+      kind: input.kind,
+      scene: input.description,
+      references: loadReferences(config, input.kind, input.references),
+      draft: fs.readFileSync(png),
+      draftOnly: true,
+    });
+    return verdict;
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+export async function runJob(job, config) {
+  const { input } = job;
+  const ctx = {
+    log: message => job.log.push({ t: Date.now(), message }),
+    step: (key, state, detail) => {
+      job.steps[key] = { state, detail };
+    },
+    check: () => {
+      if (job.abort.signal.aborted) throw new Error('Avbrutt');
+    },
+  };
+  const { log, step, check } = ctx;
+
+  const name = safeName(input.name, input.description);
+  const dir = path.join(config.outputDir, `${name}-${stamp()}`);
+  fs.mkdirSync(dir, { recursive: true });
+  job.name = name;
+  job.dir = dir;
+  log(`Mappe: ${dir}`);
+
+  // 1. Style references
+  step('references', 'running');
+  const references = loadReferences(config, input.kind, input.references);
+  step('references', 'done', references.map(r => r.name).join(', '));
+
+  // The user's picture: a photo for the request (at most 1536 px), or a
+  // finished draft that is traced as it is.
+  let picture = null;
+  if (input.image?.data) {
+    const ext = (input.image.mime || 'image/png')
+      .split('/')[1]
+      .replace('jpeg', 'jpg');
+    const original = path.join(dir, `bilde-original.${ext}`);
+    fs.writeFileSync(original, Buffer.from(input.image.data, 'base64'));
+    const png = path.join(dir, 'bilde.png');
+    sipsToPng(original, png, input.traceOnly ? 0 : 1536);
+    picture = fs.readFileSync(png);
+  }
+
+  // 2–3. Draft, review and edit rounds
+  check();
+  let draft;
+  if (input.traceOnly) {
+    if (!picture) throw new Error('Legg ved utkastet som skal spores');
+    checkDraft(path.join(dir, 'bilde.png'), dir);
+    draft = picture;
+    saveDraft(job, dir, draft, 'Eget utkast');
+    step('draft', 'done', 'eget utkast');
+    step('review', 'skipped');
+  } else {
+    draft = await generate(job, config, ctx, {
+      dir,
+      references,
+      photo: picture,
+    });
+    draft = input.review
+      ? await review(job, config, ctx, { dir, references, draft })
+      : (step('review', 'skipped'), draft);
+  }
+
+  // 4. Trace
+  check();
+  await trace(job, config, ctx, { dir, name, draft });
+
+  const read = suffix =>
+    cleanSvg(fs.readFileSync(path.join(dir, `${name}${suffix}.svg`), 'latin1'));
+  job.result = {
+    name,
+    dir,
+    ai: path.join(dir, `${name}.ai`),
+    svgs: {
+      standard: read(''),
+      darkmode: read('-darkmode'),
+      contrast: read('-contrast'),
+    },
+    compare: input.compare
+      ? {
+          name: references[0].name,
+          svgs: librarySvgs(
+            config.libraryDir,
+            references[0].id,
+            input.kind === 'animal',
+          ),
+        }
+      : null,
+  };
+  fs.writeFileSync(
+    path.join(dir, 'jobb.json'),
+    `${JSON.stringify(
+      {
+        input: { ...input, image: input.image ? '(bilde)' : null },
+        references: references.map(r => r.png),
+        cost: job.cost,
+        remaining: job.remaining,
+        log: job.log,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
+
+function falSettings(config, job) {
+  return {
+    fal: {
+      key: config.falKey,
+      model: config.falModel,
+      signal: job.abort.signal,
+    },
+    settings: {
+      resolution: config.falResolution,
+      aspect_ratio: '1:1',
+      output_format: 'png',
+      num_images: 1,
+    },
+    price: FAL_PRICE[config.falResolution] ?? 0,
+  };
+}
+
+async function generate(
+  job,
+  config,
+  { step, log },
+  { dir, references, photo },
+) {
+  const { input } = job;
+  if (!config.falKey) throw new Error('fal.ai-nøkkelen mangler i config-fila');
+  const prompt = generationPrompt(config.skillDir, {
+    kind: input.kind,
+    scene: input.description,
+    peach: input.peach,
+    hasPhoto: Boolean(photo),
+  });
+  fs.writeFileSync(path.join(dir, 'prompt.txt'), `${prompt}\n`);
+  const { fal, settings, price } = falSettings(config, job);
+
+  step('draft', 'running');
+  const { bytes } = await falImage({
+    ...fal,
+    input: {
+      prompt,
+      image_urls: [
+        ...references.map(r => dataUri(r.bytes)),
+        ...(photo ? [dataUri(photo)] : []),
+      ],
+      ...settings,
+    },
+    onStatus: s => step('draft', 'running', s),
+  });
+  job.cost.fal += price;
+  saveDraft(job, dir, bytes, 'Utkast');
+  step('draft', 'done');
+  log('Utkast 1 er klart');
+  return bytes;
+}
+
+async function review(
+  job,
+  config,
+  { step, log, check },
+  { dir, references, draft },
+) {
+  const { input } = job;
+  if (!config.anthropicApiKey)
+    throw new Error('Anthropic-nøkkelen mangler i config-fila');
+  const { fal, settings, price } = falSettings(config, job);
+  const claude = {
+    apiKey: config.anthropicApiKey,
+    baseUrl: config.anthropicBaseUrl,
+    model: config.reviewModel,
+    brief: reviewBrief(config.skillDir),
+    kind: input.kind,
+    scene: input.description,
+    references,
+    signal: job.abort.signal,
+  };
+  for (let round = 0; ; round++) {
+    check();
+    step('review', 'running', `vurdering ${round + 1}`);
+    const verdict = await reviewDraft({ ...claude, draft });
+    job.cost.claude += verdict.cost || 0;
+    job.drafts[job.drafts.length - 1].review = {
+      approved: verdict.approved,
+      deviations: verdict.deviations,
+    };
+    fs.writeFileSync(
+      path.join(dir, `vurdering-${round + 1}.json`),
+      `${JSON.stringify(verdict, null, 2)}\n`,
+    );
+    log(
+      verdict.approved
+        ? `Vurdering ${round + 1}: godkjent`
+        : `Vurdering ${round + 1}: ${verdict.deviations.length} avvik`,
+    );
+    if (verdict.approved || round >= MAX_EDIT_ROUNDS) {
+      job.remaining = verdict.approved ? [] : verdict.deviations;
+      step(
+        'review',
+        'done',
+        verdict.approved ? 'godkjent' : 'avvik igjen etter to runder',
+      );
+      return draft;
+    }
+
+    check();
+    step('review', 'running', `redigering ${round + 1}`);
+    // raster-first.md §3: the draft goes first, the reference that shows the fix second.
+    const fix = references[verdict.fix_reference - 1];
+    fs.writeFileSync(
+      path.join(dir, `redigering-${round + 1}.txt`),
+      `${verdict.edit_prompt}\n`,
+    );
+    const edited = await falImage({
+      ...fal,
+      input: {
+        prompt: verdict.edit_prompt,
+        image_urls: [dataUri(draft), ...(fix ? [dataUri(fix.bytes)] : [])],
+        ...settings,
+      },
+      onStatus: s => step('review', 'running', `redigering ${round + 1}: ${s}`),
+    });
+    job.cost.fal += price;
+    draft = edited.bytes;
+    saveDraft(job, dir, draft, `Redigering ${round + 1}`);
+  }
+}
+
+async function trace(job, config, { step, log }, { dir, name, draft }) {
+  const { input } = job;
+  step('trace', 'running', 'Illustrator');
+  let draftFile = path.join(dir, 'utkast-endelig.png');
+  fs.writeFileSync(draftFile, draft);
+  let underlay = input.kind === 'animal';
+  if (!traceablePng(draft)) {
+    const converted = path.join(dir, 'utkast-endelig-rgb.png');
+    sipsToPng(draftFile, converted);
+    draftFile = converted;
+    if (!traceablePng(fs.readFileSync(converted))) {
+      underlay = false;
+      log('Utkastet er ikke en 8-bit RGB-PNG: sporer uten papirunderlag');
+    }
+  }
+  const script = path.join(config.skillDir, 'scripts', 'illustrator-trace.mjs');
+  const args = [
+    script,
+    draftFile,
+    '--out',
+    dir,
+    '--name',
+    name,
+    '--app',
+    config.illustratorApp,
+  ];
+  if (input.kind === 'animal') {
+    args.push('--construction', 'animals', '--backdrop');
+    if (underlay) args.push('--underlay');
+    if (config.carriersFile && fs.existsSync(config.carriersFile))
+      args.push('--carriers', config.carriersFile);
+    else log('Ingen carriers-fil: linjene får ikke breddeprofil');
+  }
+  await runTrace(job, args, log);
+  step('trace', 'done');
+}
+
+function saveDraft(job, dir, bytes, label) {
+  const n = job.drafts.length + 1;
+  const file = path.join(dir, `utkast-${n}.png`);
+  fs.writeFileSync(file, bytes);
+  job.drafts.push({ n, label, file });
+}
+
+function runTrace(job, args, log) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const onAbort = () => child.kill();
+    job.abort.signal.addEventListener('abort', onAbort, { once: true });
+    let stderr = '';
+    child.stdout.on('data', chunk => {
+      for (const line of String(chunk).split('\n'))
+        if (line.trim()) log(`Trace: ${line.trim().slice(0, 300)}`);
+    });
+    child.stderr.on('data', chunk => (stderr += chunk));
+    child.on('error', reject);
+    child.on('close', code => {
+      job.abort.signal.removeEventListener('abort', onAbort);
+      if (job.abort.signal.aborted) reject(new Error('Avbrutt'));
+      else if (code === 0) resolve();
+      else reject(new Error(traceError(stderr, code)));
+    });
+  });
+}
+
+// osascript's message is the useful part of the trace script's stack trace.
+function traceError(stderr, code) {
+  const apple = stderr.match(/execution error: (.*?)(?:\\n|'|\n|$)/);
+  if (/-1712/.test(stderr))
+    return 'Illustrator brukte mer enn 15 minutter, og trace-scriptet ga opp. Lukk store dokumenter i Illustrator og prøv igjen; det som ble ferdig, ligger i mappa.';
+  return `Trace feilet (kode ${code}): ${
+    apple ? apple[1] : stderr.trim().slice(-600)
+  }`;
+}
+
+export function illustratorDocuments(app) {
+  return new Promise(resolve => {
+    execFile(
+      'osascript',
+      ['-e', `tell application ${JSON.stringify(app)} to count documents`],
+      { timeout: 4000 },
+      (error, stdout) => resolve(error ? null : Number(stdout.trim())),
+    );
+  });
+}

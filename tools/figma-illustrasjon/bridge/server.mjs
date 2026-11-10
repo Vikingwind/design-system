@@ -1,0 +1,283 @@
+#!/usr/bin/env node
+// Local bridge for the Figma plugin «Entur illustrasjon». Listens on
+// 127.0.0.1 only, runs one job at a time. macOS, Node 24, no dependencies.
+//
+//   node tools/figma-illustrasjon/bridge/server.mjs
+
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+
+import { configFile, loadConfig } from './config.mjs';
+import { FAL_PRICE } from './fal.mjs';
+import {
+  MAX_EDIT_ROUNDS,
+  figmaPrompt,
+  illustratorDocuments,
+  illustratorRunning,
+  listReferences,
+  reviewOnce,
+  runJob,
+} from './pipeline.mjs';
+
+const MAX_BODY = 40 * 1024 * 1024;
+const jobs = new Map();
+let active = null;
+
+async function status(config) {
+  const traceScript = path.join(
+    config.skillDir,
+    'scripts',
+    'illustrator-trace.mjs',
+  );
+  const running = illustratorRunning(config.illustratorApp);
+  return {
+    bridge: 'entur-illustrasjon',
+    platform: process.platform,
+    skill: fs.existsSync(traceScript),
+    library: fs.existsSync(config.libraryDir),
+    illustrator: fs.existsSync(config.illustratorApp),
+    illustratorRunning: running,
+    // Asking a tracing Illustrator would wait for the trace to finish.
+    illustratorDocuments:
+      running && !active
+        ? await illustratorDocuments(config.illustratorApp)
+        : null,
+    carriers: Boolean(
+      config.carriersFile && fs.existsSync(config.carriersFile),
+    ),
+    falKey: Boolean(config.falKey),
+    anthropicKey: Boolean(config.anthropicApiKey),
+    falModel: config.falModel,
+    reviewModel: config.reviewModel,
+    pricePerImage: FAL_PRICE[config.falResolution] ?? null,
+    maxEditRounds: MAX_EDIT_ROUNDS,
+    busy: Boolean(active),
+  };
+}
+
+function send(res, code, body, type = 'application/json') {
+  res.writeHead(code, { 'Content-Type': type });
+  res.end(type === 'application/json' ? JSON.stringify(body) : body);
+}
+
+function paired(req, config) {
+  const given = Buffer.from(
+    String(req.headers['x-bridge-code'] || '').toUpperCase(),
+  );
+  const expected = Buffer.from(config.pairingCode);
+  return (
+    given.length === expected.length && crypto.timingSafeEqual(given, expected)
+  );
+}
+
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    req.on('data', chunk => {
+      size += chunk.length;
+      if (size > MAX_BODY) {
+        reject(new Error('For stor forespørsel'));
+        req.destroy();
+      } else chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
+function publicJob(job) {
+  return {
+    id: job.id,
+    state: job.state,
+    name: job.name,
+    dir: job.dir,
+    steps: job.steps,
+    log: job.log.slice(-40),
+    drafts: job.drafts.map(({ n, label, review }) => ({ n, label, review })),
+    remaining: job.remaining,
+    cost: job.cost,
+    error: job.error,
+    result: job.state === 'done' ? job.result : null,
+  };
+}
+
+async function startJob(input, config) {
+  if (active)
+    throw Object.assign(new Error('En jobb kjører allerede'), { code: 409 });
+  if (!['animal', 'person'].includes(input.kind))
+    throw Object.assign(new Error('Velg dyr eller person'), { code: 400 });
+  if (
+    !String(input.description || '').trim() &&
+    !(input.traceOnly && input.name)
+  )
+    throw Object.assign(new Error('Skriv en kort beskrivelse'), { code: 400 });
+  const job = {
+    id: crypto.randomUUID(),
+    state: 'running',
+    input,
+    steps: {},
+    log: [],
+    drafts: [],
+    remaining: null,
+    cost: { fal: 0, claude: 0 },
+    abort: new AbortController(),
+  };
+  jobs.set(job.id, job);
+  active = job;
+  runJob(job, config)
+    .then(() => (job.state = 'done'))
+    .catch(error => {
+      job.state = job.abort.signal.aborted ? 'cancelled' : 'failed';
+      job.error = error.message;
+      for (const step of Object.values(job.steps))
+        if (step.state === 'running') step.state = 'failed';
+      console.error(`[${job.id.slice(0, 8)}] ${error.stack || error.message}`);
+    })
+    .finally(() => {
+      active = null;
+      console.log(`[${job.id.slice(0, 8)}] ${job.state}`);
+    });
+  return job;
+}
+
+async function handle(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, X-Bridge-Code',
+      'Access-Control-Max-Age': '600',
+      ...(req.headers['access-control-request-private-network']
+        ? { 'Access-Control-Allow-Private-Network': 'true' }
+        : {}),
+    });
+    return res.end();
+  }
+
+  const url = new URL(req.url, 'http://localhost');
+  let config;
+  try {
+    config = loadConfig();
+  } catch (error) {
+    if (url.pathname === '/api/status')
+      return send(res, 200, {
+        bridge: 'entur-illustrasjon',
+        configError: error.message,
+      });
+    throw error;
+  }
+  const parts = url.pathname.split('/').filter(Boolean);
+
+  if (url.pathname === '/api/status')
+    return send(res, 200, {
+      ...(await status(config)),
+      paired: paired(req, config),
+    });
+
+  // Library PNGs are public on linje.entur.no; served without the code so <img> can load them.
+  if (parts[0] === 'api' && parts[1] === 'library' && req.method === 'GET') {
+    const rel = decodeURIComponent(parts.slice(2).join('/'));
+    const file = path.resolve(config.libraryDir, rel);
+    if (
+      !file.startsWith(path.resolve(config.libraryDir) + path.sep) ||
+      !file.endsWith('.png') ||
+      !fs.existsSync(file)
+    )
+      return send(res, 404, { error: 'Fant ikke bildet' });
+    res.setHeader('Cache-Control', 'max-age=3600');
+    return send(res, 200, fs.readFileSync(file), 'image/png');
+  }
+
+  if (!paired(req, config))
+    return send(res, 401, { error: 'Feil eller manglende parkode' });
+
+  if (url.pathname === '/api/references' && req.method === 'GET')
+    return send(
+      res,
+      200,
+      listReferences(config.libraryDir, url.searchParams.get('kind')),
+    );
+
+  const json = String(req.headers['content-type']).startsWith(
+    'application/json',
+  );
+
+  if (url.pathname === '/api/prompt' && req.method === 'POST' && json) {
+    const input = JSON.parse(await readBody(req));
+    return send(res, 200, { prompt: figmaPrompt(config, input) });
+  }
+
+  if (url.pathname === '/api/review' && req.method === 'POST' && json) {
+    const input = JSON.parse(await readBody(req));
+    return send(res, 200, await reviewOnce(config, input));
+  }
+
+  if (url.pathname === '/api/jobs' && req.method === 'POST') {
+    if (!String(req.headers['content-type']).startsWith('application/json'))
+      return send(res, 415, { error: 'Forventet JSON' });
+    const input = JSON.parse(await readBody(req));
+    const job = await startJob(input, config);
+    return send(res, 202, publicJob(job));
+  }
+
+  const job =
+    parts[0] === 'api' && parts[1] === 'jobs' ? jobs.get(parts[2]) : null;
+  if (parts[1] === 'jobs' && !job)
+    return send(res, 404, { error: 'Fant ikke jobben' });
+
+  if (job && parts.length === 3 && req.method === 'GET')
+    return send(res, 200, publicJob(job));
+
+  if (job && parts[3] === 'cancel' && req.method === 'POST') {
+    job.abort.abort();
+    return send(res, 200, publicJob(job));
+  }
+
+  if (job && parts[3] === 'drafts' && req.method === 'GET') {
+    const draft = job.drafts.find(d => d.n === Number(parts[4]));
+    if (!draft) return send(res, 404, { error: 'Fant ikke utkastet' });
+    return send(res, 200, fs.readFileSync(draft.file), 'image/png');
+  }
+
+  return send(res, 404, { error: 'Ukjent adresse' });
+}
+
+const config = loadConfig();
+const server = http.createServer((req, res) => {
+  handle(req, res).catch(error => {
+    if (!res.headersSent)
+      send(res, error.code || 500, { error: error.message });
+    else res.end();
+  });
+});
+
+server.listen(config.port, '127.0.0.1', async () => {
+  const s = await status(config);
+  const yes = ok => (ok ? 'ja' : 'NEI');
+  console.log(`Entur illustrasjon – bro på http://localhost:${config.port}`);
+  console.log(`Config:   ${configFile}`);
+  console.log(
+    `Parkode:  ${config.pairingCode}  (lim inn i pluginen første gang)`,
+  );
+  console.log(`Skill:    ${config.skillDir}  ${yes(s.skill)}`);
+  console.log(
+    `Bibliotek:${' '}${yes(s.library)}   Illustrator: ${yes(
+      s.illustrator,
+    )} (kjører: ${yes(s.illustratorRunning)}, åpne dokumenter: ${
+      s.illustratorDocuments ?? '?'
+    })`,
+  );
+  console.log(
+    `Carriers: ${config.carriersFile || '(ikke satt)'}  ${yes(s.carriers)}`,
+  );
+  console.log(
+    `fal.ai-nøkkel: ${yes(s.falKey)}   Anthropic-nøkkel: ${yes(
+      s.anthropicKey,
+    )}`,
+  );
+  if (process.platform !== 'darwin')
+    console.log('Advarsel: tracen krever macOS og Illustrator.');
+});

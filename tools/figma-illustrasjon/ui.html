@@ -1,0 +1,1362 @@
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<style>
+  :root {
+    --bg: var(--figma-color-bg, #fff);
+    --bg-secondary: var(--figma-color-bg-secondary, #f5f5f5);
+    --text: var(--figma-color-text, #1e1e1e);
+    --text-secondary: var(--figma-color-text-secondary, #757575);
+    --border: var(--figma-color-border, #e6e6e6);
+    --brand: var(--figma-color-bg-brand, #0a6dc2);
+    --on-brand: var(--figma-color-text-onbrand, #fff);
+    --brand-text: var(--figma-color-text-brand, #0068c9);
+    --warning: var(--figma-color-text-warning, #9e5400);
+    --danger: var(--figma-color-text-danger, #dc3412);
+    --success: var(--figma-color-text-success, #14ae5c);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 11px/16px Inter, system-ui, -apple-system, sans-serif;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+
+  .block {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .block:last-child {
+    border-bottom: 0;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-weight: 600;
+  }
+
+  .meta,
+  .warnings {
+    margin: 4px 0 0;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .warnings {
+    padding-left: 16px;
+  }
+
+  .warnings .warn {
+    color: var(--warning);
+  }
+
+  .warnings .bad {
+    color: var(--danger);
+  }
+
+  .pill {
+    padding: 0 6px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .pill.ok {
+    color: var(--success);
+  }
+
+  .pill.bad {
+    color: var(--danger);
+  }
+
+  .field + .field {
+    margin-top: 10px;
+  }
+
+  .two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  input[type='text'],
+  textarea,
+  select {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  select:disabled {
+    opacity: 0.6;
+  }
+
+  button {
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: default;
+    opacity: 0.4;
+  }
+
+  button.primary {
+    width: 100%;
+    padding: 8px;
+    border-color: var(--brand);
+    background: var(--brand);
+    color: var(--on-brand);
+    font-weight: 600;
+  }
+
+  button.link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--brand-text);
+    text-decoration: underline;
+  }
+
+  :is(button, input, textarea, select):focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 1px;
+  }
+
+  .segmented {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+
+  .segmented button {
+    flex: 1;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .segmented button + button {
+    border-left: 1px solid var(--border);
+  }
+
+  .segmented button[aria-pressed='true'] {
+    background: var(--brand);
+    color: var(--on-brand);
+  }
+
+  .segmented button:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .drop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 14px 8px;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  .drop.over {
+    border-color: var(--brand);
+    background: var(--bg-secondary);
+  }
+
+  .photo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .photo img {
+    width: 48px;
+    height: 48px;
+    border-radius: 4px;
+    object-fit: cover;
+    background: var(--bg-secondary);
+  }
+
+  .photo span {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .refs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .ref {
+    position: relative;
+    margin: 0;
+    padding: 2px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-weight: 400;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  .ref:has(input:checked) {
+    border-color: var(--brand);
+    box-shadow: inset 0 0 0 1px var(--brand);
+  }
+
+  .ref:has(input:disabled:not(:checked)) {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  .ref input {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    margin: 0;
+  }
+
+  .ref img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: contain;
+    background: #fff;
+    border-radius: 3px;
+  }
+
+  .ref span {
+    display: block;
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 14px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-weight: 400;
+  }
+
+  .check + .meta {
+    margin: 2px 0 8px 20px;
+  }
+
+  .check + .check {
+    margin-top: 6px;
+  }
+
+  .steps {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .steps li {
+    display: flex;
+    gap: 6px;
+    padding: 2px 0;
+  }
+
+  .steps .icon {
+    width: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  .steps .done .icon {
+    color: var(--success);
+  }
+
+  .steps .failed .icon {
+    color: var(--danger);
+  }
+
+  .steps .running {
+    font-weight: 600;
+  }
+
+  .steps .detail {
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .drafts {
+    display: grid;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .draft {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 8px;
+  }
+
+  .draft img {
+    width: 96px;
+    height: 96px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: #fff;
+    object-fit: contain;
+  }
+
+  .draft ul {
+    margin: 2px 0 0;
+    padding-left: 14px;
+    color: var(--text-secondary);
+  }
+
+  .result {
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: 6px;
+    background: var(--bg-secondary);
+  }
+
+  .path {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 4px;
+  }
+
+  .path code {
+    flex: 1;
+    overflow: hidden;
+    font-size: 10px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    direction: rtl;
+    text-align: left;
+  }
+
+  .error {
+    margin-top: 8px;
+    color: var(--danger);
+    white-space: pre-wrap;
+  }
+
+  details {
+    margin-top: 10px;
+  }
+
+  pre {
+    max-height: 160px;
+    overflow: auto;
+    margin: 4px 0 0;
+    font-size: 10px;
+    line-height: 14px;
+    white-space: pre-wrap;
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+</style>
+
+<section class="block" id="bridge">
+  <div class="row">
+    <span>Lokal bro</span>
+    <span class="pill" id="bridge-state">Sjekker …</span>
+  </div>
+  <p class="meta" id="bridge-help" hidden>
+    Start broen i Terminal fra repoet:<br /><code
+      >node tools/figma-illustrasjon/bridge/server.mjs</code
+    >
+  </p>
+  <form id="pair" hidden>
+    <label for="code" class="meta"
+      >Parkoden står i Terminal når broen starter</label
+    >
+    <div class="two">
+      <input
+        id="code"
+        type="text"
+        placeholder="ABCD-EFGH"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button type="submit">Koble til</button>
+    </div>
+  </form>
+  <ul class="warnings" id="warnings"></ul>
+</section>
+
+<form id="form">
+  <section class="block">
+    <div class="field">
+      <label id="kind-label">Motiv</label>
+      <div
+        class="segmented"
+        role="group"
+        aria-labelledby="kind-label"
+        id="kind"
+      >
+        <button type="button" data-kind="animal" aria-pressed="true">
+          Dyr
+        </button>
+        <button type="button" data-kind="person" aria-pressed="false">
+          Person
+        </button>
+        <button type="button" disabled title="Objekter kommer senere">
+          Objekt
+        </button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="format">Format</label>
+      <select id="format" disabled>
+        <option>Kvadrat · 320 × 320</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="description">Beskrivelse</label>
+      <textarea
+        id="description"
+        rows="3"
+        placeholder="En fjellrev som sitter ved et busstoppskilt og ser opp"
+      ></textarea>
+      <p class="meta">Én setning: hvem, hva de gjør, og høyst én ting.</p>
+    </div>
+    <div class="field two">
+      <div>
+        <label for="name">Navn</label>
+        <input id="name" type="text" placeholder="Fox-bus-stop" />
+      </div>
+      <div>
+        <label for="peach">Fersken-element</label>
+        <input id="peach" type="text" placeholder="skiltet" />
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="field">
+      <label id="source-label">Utkast fra</label>
+      <div
+        class="segmented"
+        role="group"
+        aria-labelledby="source-label"
+        id="source"
+      >
+        <button type="button" data-source="figma" aria-pressed="true">
+          Figma
+        </button>
+        <button type="button" data-source="fal" aria-pressed="false">
+          fal.ai
+        </button>
+      </div>
+      <p class="meta" id="source-help"></p>
+    </div>
+
+    <div class="field" id="figma-prompt">
+      <div class="row">
+        <label for="prompt">1. Prompt til Figma</label>
+        <button type="button" id="copy-prompt" disabled>Kopier</button>
+      </div>
+      <textarea id="prompt" rows="6" readonly></textarea>
+      <p class="meta">
+        Lim den inn i Figmas bildegenerering og be om et kvadratisk bilde. Figma
+        tar ingen stilreferanser, så stilen glir mer enn med fal.ai.
+      </p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="row">
+      <span id="image-title">Bilde</span
+      ><span class="meta" id="image-note">valgfritt</span>
+    </div>
+    <div class="drop" id="drop">
+      <span>Slipp et bilde her</span>
+      <span>
+        <button type="button" class="link" id="pick">Velg fil</button> ·
+        <button type="button" class="link" id="use-selection" disabled>
+          Bruk markert bilde
+        </button>
+      </span>
+      <input type="file" id="file" accept="image/*" hidden />
+    </div>
+    <div class="photo" id="photo" hidden>
+      <span id="photo-name"></span>
+      <button type="button" id="photo-remove">Fjern</button>
+    </div>
+    <div id="trace-only-row" hidden>
+      <label class="check"
+        ><input type="checkbox" id="trace-only" /> Bildet er et ferdig utkast:
+        spor det direkte</label
+      >
+      <p class="meta">
+        Hopper over bildemodellen og vurderingen. Bruk et kvadratisk PNG-utkast,
+        for eksempel fra Weave.
+      </p>
+    </div>
+    <div id="figma-review" hidden>
+      <div class="actions">
+        <button type="button" id="review-draft">
+          Vurder utkastet med Claude
+        </button>
+      </div>
+      <div class="result" id="review-result" hidden></div>
+    </div>
+    <p class="meta" id="image-help"></p>
+  </section>
+
+  <section class="block">
+    <div class="row">
+      <span>Stilreferanser</span>
+      <span class="meta" id="ref-count"></span>
+    </div>
+    <div class="refs" id="refs"></div>
+  </section>
+
+  <section class="block">
+    <div id="review-row">
+      <label class="check"
+        ><input type="checkbox" id="review" /> Automatisk vurdering med
+        Claude</label
+      >
+      <p class="meta" id="review-help">
+        Claude ser utkastet mot referansene og sjekklisten i skillen, og retter
+        avvik i opptil to redigeringsrunder.
+      </p>
+    </div>
+    <label class="check"
+      ><input type="checkbox" id="with-draft" checked /> Sett inn utkastet ved
+      siden av</label
+    >
+    <label class="check"
+      ><input type="checkbox" id="compare" checked /> Sett inn et
+      biblioteksmotiv til sammenligning</label
+    >
+  </section>
+
+  <section class="block">
+    <p class="meta" id="cost"></p>
+    <div class="actions">
+      <button type="submit" class="primary" id="start" disabled>
+        Lag illustrasjon
+      </button>
+    </div>
+  </section>
+</form>
+
+<section class="block" id="progress" hidden>
+  <div class="row">
+    <span id="job-title">Lager illustrasjon</span>
+    <button type="button" id="cancel">Avbryt</button>
+  </div>
+  <ol class="steps" id="steps"></ol>
+  <div class="drafts" id="drafts"></div>
+  <div class="result" id="result" hidden></div>
+  <p class="error" id="job-error" hidden></p>
+  <details>
+    <summary>Logg</summary>
+    <pre id="log"></pre>
+  </details>
+  <div class="actions">
+    <button type="button" id="again" hidden>Ny illustrasjon</button>
+  </div>
+</section>
+
+<script>
+  const BRIDGE = 'http://localhost:7317';
+  const STEPS = [
+    ['references', 'Stilreferanser'],
+    ['draft', 'Utkast'],
+    ['review', 'Vurdering'],
+    ['trace', 'Trace i Illustrator'],
+    ['insert', 'Satt inn i Figma'],
+  ];
+
+  const $ = id => document.getElementById(id);
+  const state = {
+    code: '',
+    status: null,
+    kind: 'animal',
+    source: 'figma',
+    photo: null,
+    references: [],
+    job: null,
+    images: {},
+    inserted: false,
+  };
+
+  const usd = n => `${n.toFixed(2).replace('.', ',')} USD`;
+
+  function post(type, data) {
+    parent.postMessage({ pluginMessage: { type, ...data } }, '*');
+  }
+
+  async function api(path, options = {}) {
+    const response = await fetch(`${BRIDGE}${path}`, {
+      ...options,
+      headers: { 'X-Bridge-Code': state.code, ...(options.headers || {}) },
+    });
+    if (!response.ok) {
+      let message = `HTTP ${response.status}`;
+      try {
+        message = (await response.json()).error || message;
+      } catch (e) {}
+      throw new Error(message);
+    }
+    return response;
+  }
+
+  function base64(bytes) {
+    let out = '';
+    for (let i = 0; i < bytes.length; i += 0x8000)
+      out += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(out);
+  }
+
+  function mimeOf(bytes) {
+    if (bytes[0] === 0x89 && bytes[1] === 0x50) return 'image/png';
+    if (bytes[0] === 0xff && bytes[1] === 0xd8) return 'image/jpeg';
+    if (bytes[0] === 0x47 && bytes[1] === 0x49) return 'image/gif';
+    if (bytes[8] === 0x57 && bytes[9] === 0x45) return 'image/webp';
+    return 'application/octet-stream';
+  }
+
+  function dataUrl(bytes, mime) {
+    return `data:${mime};base64,${base64(bytes)}`;
+  }
+
+  // Bridge status
+
+  async function checkBridge() {
+    try {
+      const status = await (await api('/api/status')).json();
+      state.status = status;
+      renderBridge();
+      if (status.paired && !state.references.length) {
+        await loadReferences();
+        refreshPrompt();
+      }
+    } catch (e) {
+      state.status = null;
+      renderBridge();
+    }
+    setTimeout(checkBridge, state.status && state.status.paired ? 15000 : 4000);
+  }
+
+  function renderBridge() {
+    const s = state.status;
+    const pill = $('bridge-state');
+    $('bridge-help').hidden = Boolean(s);
+    $('pair').hidden = !s || s.paired || Boolean(s.configError);
+    pill.className = 'pill';
+    if (!s) {
+      pill.textContent = 'Ingen kontakt';
+      pill.classList.add('bad');
+    } else if (s.configError) {
+      pill.textContent = 'Feil i config';
+      pill.classList.add('bad');
+    } else if (!s.paired) {
+      pill.textContent = 'Ikke koblet til';
+    } else {
+      pill.textContent = s.busy && !state.job ? 'Opptatt' : 'Tilkoblet';
+      pill.classList.add('ok');
+    }
+
+    const warnings = [];
+    if (s && s.configError) warnings.push(['bad', s.configError]);
+    if (s && s.paired) {
+      if (s.platform !== 'darwin')
+        warnings.push(['bad', 'Broen krever macOS og Illustrator.']);
+      if (!s.skill)
+        warnings.push([
+          'bad',
+          'Fant ikke skillen entur-illustration. Sett skillDir i config-fila.',
+        ]);
+      if (state.source === 'fal' && !s.falKey)
+        warnings.push(['bad', 'fal.ai-nøkkelen mangler i config-fila.']);
+      if (!s.illustrator)
+        warnings.push(['bad', 'Fant ikke Adobe Illustrator 2026.']);
+      else if (!s.illustratorRunning)
+        warnings.push([
+          'warn',
+          'Illustrator kjører ikke. Start den før du lager en illustrasjon.',
+        ]);
+      else if (s.illustratorDocuments > 2)
+        warnings.push([
+          'warn',
+          `Illustrator har ${s.illustratorDocuments} dokumenter åpne. Tracen går mye tregere med store filer åpne, og gir opp etter 15 minutter.`,
+        ]);
+      if (state.kind === 'animal' && !s.carriers)
+        warnings.push([
+          'warn',
+          'Ingen carriers-fil: dyrelinjene får ikke breddeprofil.',
+        ]);
+      if (!s.anthropicKey)
+        warnings.push([
+          'warn',
+          'Ingen Anthropic-nøkkel: automatisk vurdering er av.',
+        ]);
+    }
+    $('warnings').replaceChildren(
+      ...warnings.map(([level, text]) => {
+        const li = document.createElement('li');
+        li.className = level;
+        li.textContent = text;
+        return li;
+      }),
+    );
+
+    const review = $('review');
+    review.disabled = !(s && s.anthropicKey);
+    if (review.disabled) review.checked = false;
+    renderSource();
+  }
+
+  const SOURCE_TEXT = {
+    figma: {
+      help: 'Du lager utkastet selv i Figma med prompten under. Det bruker AI-kredittene i Figma-planen, og tracen er gratis.',
+      title: '2. Utkastet fra Figma',
+      note: '',
+      image:
+        'Marker bildet Figma laget fra prompten: et kvadratisk strekutkast på hvit bakgrunn, ikke et foto. Trykk Bruk «…». Vurder det gjerne før du sporer: Claude lister avvikene og skriver en rettelse du kan lime inn i Figmas bilderedigering.',
+    },
+    fal: {
+      help: 'Broen lager utkastet hos fal.ai, med biblioteksbildene under som stilreferanser. Det koster per bilde.',
+      title: 'Bilde',
+      note: 'valgfritt',
+      image:
+        'Bruk eget foto eller et fritt lisensiert bilde: det gir motiv og positur, ikke stil. Er bildet en illustrasjon fra andre, beskriv heller scenen med ord.',
+    },
+  };
+
+  function renderSource() {
+    const figma = state.source === 'figma';
+    const text = SOURCE_TEXT[state.source];
+    for (const b of document.querySelectorAll('#source button'))
+      b.setAttribute('aria-pressed', String(b.dataset.source === state.source));
+    $('source-help').textContent = text.help;
+    $('image-title').textContent = text.title;
+    $('image-note').textContent = text.note;
+    $('image-help').textContent = text.image;
+    $('figma-prompt').hidden = !figma;
+    $('trace-only-row').hidden = figma || !state.photo;
+    $('figma-review').hidden = !figma || !state.photo;
+    const s = state.status;
+    $('review-draft').disabled = !(s && s.anthropicKey) || state.reviewing;
+    renderCost();
+    renderStart();
+  }
+
+  for (const button of document.querySelectorAll('#source button')) {
+    button.addEventListener('click', () => {
+      state.source = button.dataset.source;
+      renderBridge();
+      refreshPrompt();
+    });
+  }
+
+  let promptTimer = null;
+  function refreshPrompt() {
+    clearTimeout(promptTimer);
+    promptTimer = setTimeout(async () => {
+      const description = $('description').value.trim();
+      const ready =
+        state.source === 'figma' && state.status && state.status.paired;
+      $('copy-prompt').disabled = true;
+      if (!ready) return;
+      if (!description) {
+        $('prompt').value = '';
+        $('prompt').placeholder = 'Skriv en beskrivelse først.';
+        return;
+      }
+      try {
+        const { prompt } = await (
+          await api('/api/prompt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              kind: state.kind,
+              description,
+              peach: $('peach').value.trim(),
+            }),
+          })
+        ).json();
+        $('prompt').value = prompt;
+        $('copy-prompt').disabled = false;
+      } catch (e) {
+        $('prompt').value = '';
+        $('prompt').placeholder = e.message;
+      }
+    }, 400);
+  }
+
+  $('copy-prompt').addEventListener('click', () => copyText($('prompt').value));
+
+  $('review-draft').addEventListener('click', async () => {
+    state.reviewing = true;
+    renderSource();
+    const box = $('review-result');
+    box.hidden = false;
+    box.textContent = 'Claude vurderer utkastet …';
+    try {
+      const verdict = await (
+        await api('/api/review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kind: state.kind,
+            description: $('description').value.trim(),
+            references: selectedRefs(),
+            image: state.photo,
+          }),
+        })
+      ).json();
+      renderVerdict(verdict);
+    } catch (e) {
+      box.textContent = `Vurderingen feilet: ${e.message}`;
+    }
+    state.reviewing = false;
+    renderSource();
+  });
+
+  function renderVerdict(verdict) {
+    const box = $('review-result');
+    const parts = [];
+    const head = document.createElement('strong');
+    head.textContent = verdict.approved
+      ? 'Ingen avvik å rette. Spor utkastet.'
+      : `${verdict.deviations.length} avvik`;
+    parts.push(head);
+    if (verdict.deviations.length) {
+      const list = document.createElement('ul');
+      for (const d of verdict.deviations) {
+        const li = document.createElement('li');
+        li.textContent = d;
+        list.append(li);
+      }
+      parts.push(list);
+    }
+    if (!verdict.approved && verdict.edit_prompt) {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const label = document.createElement('span');
+      label.textContent = 'Rettelse til Figma';
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.textContent = 'Kopier';
+      copy.addEventListener('click', () => copyText(verdict.edit_prompt));
+      row.append(label, copy);
+      const area = document.createElement('textarea');
+      area.rows = 5;
+      area.readOnly = true;
+      area.value = verdict.edit_prompt;
+      const note = document.createElement('p');
+      note.className = 'meta';
+      note.textContent =
+        'Rediger bildet i Figma med denne prompten, marker det nye bildet, og vurder eller spor det.';
+      parts.push(row, area, note);
+    }
+    if (verdict.cost) {
+      const cost = document.createElement('p');
+      cost.className = 'meta';
+      cost.textContent = `Vurderingen kostet ${usd(verdict.cost)}.`;
+      parts.push(cost);
+    }
+    box.replaceChildren(...parts);
+  }
+
+  // Form
+
+  function renderCost() {
+    const s = state.status;
+    if (!s || !s.pricePerImage) {
+      $('cost').textContent = '';
+      return;
+    }
+    if (state.source === 'figma') {
+      $('cost').textContent =
+        'Utkastet bruker AI-kredittene i Figma-planen, og tracen er gratis. En vurdering med Claude koster omtrent 0,10–0,25 USD.';
+      return;
+    }
+    if (traceOnly()) {
+      $('cost').textContent =
+        'Bare trace i Illustrator: ingen kostnad hos fal.ai eller Claude.';
+      return;
+    }
+    const runs = 1 + ($('review').checked ? s.maxEditRounds : 0);
+    let text = `Bildemodell: opptil ${runs} kjøring${
+      runs > 1 ? 'er' : ''
+    } à ${usd(s.pricePerImage)} hos fal.ai, høyst ${usd(
+      runs * s.pricePerImage,
+    )}.`;
+    if ($('review').checked)
+      text += ` Claude-vurdering: opptil ${
+        s.maxEditRounds + 1
+      } runder, omtrent 0,10–0,25 USD hver.`;
+    $('cost').textContent = text;
+  }
+
+  function selectedRefs() {
+    return [...document.querySelectorAll('#refs input:checked')].map(
+      input => input.value,
+    );
+  }
+
+  function traceOnly() {
+    return (
+      Boolean(state.photo) &&
+      (state.source === 'figma' || $('trace-only').checked)
+    );
+  }
+
+  function renderStart() {
+    const s = state.status;
+    const refs = selectedRefs().length;
+    const only = traceOnly();
+    $('ref-count').textContent = `${refs} valgt, 2–4`;
+    for (const input of document.querySelectorAll('#refs input'))
+      input.disabled = !input.checked && refs >= 4;
+    $('review-row').hidden = only || state.source === 'figma';
+    $('start').textContent = only ? 'Spor utkastet' : 'Lag illustrasjon';
+    $('start').disabled = !(
+      s &&
+      s.paired &&
+      s.skill &&
+      (s.falKey || only) &&
+      (state.source === 'fal' || state.photo) &&
+      s.illustrator &&
+      !s.busy &&
+      refs >= 2 &&
+      ($('description').value.trim() || (only && $('name').value.trim()))
+    );
+  }
+
+  async function loadReferences() {
+    const kind = state.kind;
+    state.references = await (await api(`/api/references?kind=${kind}`)).json();
+    if (kind !== state.kind) return;
+    $('refs').replaceChildren(
+      ...state.references.map(ref => {
+        const label = document.createElement('label');
+        label.className = 'ref';
+        label.title = ref.name;
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.value = ref.id;
+        input.checked = ref.isDefault;
+        input.addEventListener('change', renderStart);
+        const img = document.createElement('img');
+        img.alt = '';
+        img.loading = 'lazy';
+        img.src = `${BRIDGE}/api/library/${ref.thumb
+          .split('/')
+          .map(encodeURIComponent)
+          .join('/')}`;
+        const name = document.createElement('span');
+        name.textContent = ref.name;
+        label.append(input, img, name);
+        return label;
+      }),
+    );
+    renderStart();
+  }
+
+  for (const button of document.querySelectorAll('#kind button[data-kind]')) {
+    button.addEventListener('click', () => {
+      state.kind = button.dataset.kind;
+      for (const b of document.querySelectorAll('#kind button[data-kind]'))
+        b.setAttribute('aria-pressed', String(b === button));
+      state.references = [];
+      $('refs').replaceChildren();
+      renderBridge();
+      if (state.status && state.status.paired) loadReferences();
+      refreshPrompt();
+    });
+  }
+
+  $('description').addEventListener('input', () => {
+    renderStart();
+    refreshPrompt();
+  });
+  $('peach').addEventListener('input', refreshPrompt);
+  $('name').addEventListener('input', renderStart);
+  $('trace-only').addEventListener('change', () => {
+    renderStart();
+    renderCost();
+  });
+  $('review').addEventListener('change', renderCost);
+
+  $('pair').addEventListener('submit', event => {
+    event.preventDefault();
+    state.code = $('code').value.trim().toUpperCase();
+    post('save-code', { code: state.code });
+    $('bridge-state').textContent = 'Sjekker …';
+    state.references = [];
+    api('/api/status')
+      .then(r => r.json())
+      .then(status => {
+        state.status = status;
+        if (!status.paired) $('code').setCustomValidity('Feil parkode');
+        else $('code').setCustomValidity('');
+        $('code').reportValidity();
+        renderBridge();
+        if (status.paired) loadReferences();
+      })
+      .catch(() => {});
+  });
+
+  // Picture
+
+  function setPhoto(bytes, name) {
+    const mime = mimeOf(bytes);
+    if (!mime.startsWith('image/')) {
+      post('notify', {
+        message: 'Filen ser ikke ut som et bilde',
+        error: true,
+      });
+      return;
+    }
+    state.photo = { data: base64(bytes), mime, name };
+    const img = document.createElement('img');
+    img.alt = '';
+    img.src = dataUrl(bytes, mime);
+    $('photo').querySelector('img')?.remove();
+    $('photo').prepend(img);
+    $('photo-name').textContent = name;
+    $('photo').hidden = false;
+    $('drop').hidden = true;
+    $('review-result').hidden = true;
+    renderSource();
+  }
+
+  async function readFile(file) {
+    if (!file) return;
+    setPhoto(new Uint8Array(await file.arrayBuffer()), file.name);
+  }
+
+  $('pick').addEventListener('click', () => $('file').click());
+  $('file').addEventListener('change', () => readFile($('file').files[0]));
+  $('use-selection').addEventListener('click', () =>
+    post('get-selected-image'),
+  );
+  $('photo-remove').addEventListener('click', () => {
+    state.photo = null;
+    $('photo').hidden = true;
+    $('drop').hidden = false;
+    $('review-result').hidden = true;
+    renderSource();
+    $('file').value = '';
+  });
+
+  const drop = $('drop');
+  document.addEventListener('dragover', event => event.preventDefault());
+  document.addEventListener('drop', event => event.preventDefault());
+  drop.addEventListener('dragover', () => drop.classList.add('over'));
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', event => {
+    drop.classList.remove('over');
+    readFile(event.dataTransfer.files[0]);
+  });
+
+  // Job
+
+  $('form').addEventListener('submit', async event => {
+    event.preventDefault();
+    $('start').disabled = true;
+    try {
+      const body = {
+        kind: state.kind,
+        description: $('description').value.trim(),
+        name: $('name').value.trim(),
+        peach: $('peach').value.trim(),
+        image: state.photo,
+        references: selectedRefs(),
+        review: $('review').checked && !traceOnly(),
+        traceOnly: traceOnly(),
+        compare: $('compare').checked,
+      };
+      const job = await (
+        await api('/api/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+      ).json();
+      state.job = job;
+      state.images = {};
+      state.inserted = false;
+      $('form').hidden = true;
+      $('progress').hidden = false;
+      $('again').hidden = true;
+      $('cancel').hidden = false;
+      $('result').hidden = true;
+      $('job-error').hidden = true;
+      $('drafts').replaceChildren();
+      renderJob();
+      poll();
+    } catch (e) {
+      post('notify', { message: e.message, error: true });
+      renderStart();
+    }
+  });
+
+  async function poll() {
+    if (!state.job) return;
+    try {
+      state.job = await (await api(`/api/jobs/${state.job.id}`)).json();
+      renderJob();
+      await loadDrafts();
+    } catch (e) {
+      $('job-error').hidden = false;
+      $('job-error').textContent = `Mistet kontakten med broen: ${e.message}`;
+    }
+    const job = state.job;
+    if (job.state === 'running') setTimeout(poll, 2000);
+    else if (job.state === 'done' && !state.inserted) insert();
+    else finish();
+  }
+
+  async function loadDrafts() {
+    for (const draft of state.job.drafts) {
+      if (state.images[draft.n]) continue;
+      const bytes = new Uint8Array(
+        await (
+          await api(`/api/jobs/${state.job.id}/drafts/${draft.n}`)
+        ).arrayBuffer(),
+      );
+      state.images[draft.n] = bytes;
+    }
+    renderDrafts();
+  }
+
+  function renderJob() {
+    const job = state.job;
+    $('job-title').textContent = job.name
+      ? `Lager ${job.name}`
+      : 'Lager illustrasjon';
+    const steps = { ...job.steps };
+    if (state.inserted) steps.insert = { state: 'done' };
+    else if (job.state === 'done') steps.insert = { state: 'running' };
+    $('steps').replaceChildren(
+      ...STEPS.map(([key, label]) => {
+        const step = steps[key] || { state: 'pending' };
+        const li = document.createElement('li');
+        li.className = step.state;
+        const icon = document.createElement('span');
+        icon.className = 'icon';
+        icon.textContent =
+          { done: '✓', running: '›', failed: '✕', skipped: '–' }[step.state] ||
+          '·';
+        const text = document.createElement('span');
+        text.textContent = label;
+        li.append(icon, text);
+        if (step.detail || step.state === 'skipped') {
+          const detail = document.createElement('span');
+          detail.className = 'detail';
+          detail.textContent =
+            step.state === 'skipped' ? 'hoppet over' : step.detail;
+          li.append(detail);
+        }
+        return li;
+      }),
+    );
+    $('log').textContent = job.log
+      .map(l => `${new Date(l.t).toLocaleTimeString('nb-NO')}  ${l.message}`)
+      .join('\n');
+    if (job.error) {
+      $('job-error').hidden = false;
+      $('job-error').textContent =
+        job.state === 'cancelled' ? 'Avbrutt.' : job.error;
+    }
+  }
+
+  function renderDrafts() {
+    $('drafts').replaceChildren(
+      ...state.job.drafts.map(draft => {
+        const wrap = document.createElement('div');
+        wrap.className = 'draft';
+        const img = document.createElement('img');
+        img.alt = draft.label;
+        img.src = dataUrl(state.images[draft.n], 'image/png');
+        const text = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = draft.label;
+        text.append(title);
+        if (draft.review) {
+          const verdict = document.createElement('div');
+          verdict.textContent = draft.review.approved
+            ? 'Godkjent i vurderingen'
+            : `${draft.review.deviations.length} avvik`;
+          const list = document.createElement('ul');
+          for (const d of draft.review.deviations) {
+            const li = document.createElement('li');
+            li.textContent = d;
+            list.append(li);
+          }
+          text.append(verdict, list);
+        }
+        wrap.append(img, text);
+        return wrap;
+      }),
+    );
+  }
+
+  function insert() {
+    const job = state.job;
+    const last = job.drafts[job.drafts.length - 1];
+    post('insert', {
+      result: job.result,
+      draft: $('with-draft').checked && last ? state.images[last.n] : null,
+    });
+  }
+
+  function finish() {
+    const job = state.job;
+    $('cancel').hidden = true;
+    $('again').hidden = false;
+    renderJob();
+    if (job.state !== 'done') return;
+    const result = $('result');
+    result.hidden = false;
+    const lines = [];
+    const cost = document.createElement('div');
+    cost.textContent = `Brukt: fal.ai ${usd(job.cost.fal)}${
+      job.cost.claude ? ` · Claude ${usd(job.cost.claude)}` : ''
+    }`;
+    lines.push(cost);
+    if (job.remaining && job.remaining.length) {
+      const left = document.createElement('div');
+      left.textContent = `Avvik igjen etter vurderingen: ${job.remaining.join(
+        ' ',
+      )}`;
+      lines.push(left);
+    }
+    for (const [label, value] of [
+      ['Illustrator-fil', job.result.ai],
+      ['Mappe', job.result.dir],
+    ]) {
+      const row = document.createElement('div');
+      row.className = 'path';
+      const name = document.createElement('span');
+      name.textContent = label;
+      const code = document.createElement('code');
+      code.textContent = value;
+      code.title = value;
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.textContent = 'Kopier';
+      copy.addEventListener('click', () => copyText(value));
+      row.append(name, code, copy);
+      lines.push(row);
+    }
+    const note = document.createElement('p');
+    note.className = 'meta';
+    note.textContent =
+      'Sjekk resultatet mot biblioteksmotivet i alle tre modusene før det brukes. Etterarbeidet i skillen (hode, hår, foldemerker) gjøres i Illustrator-fila.';
+    lines.push(note);
+    result.replaceChildren(...lines);
+  }
+
+  function copyText(text) {
+    const area = document.createElement('textarea');
+    area.value = text;
+    document.body.append(area);
+    area.select();
+    document.execCommand('copy');
+    area.remove();
+    post('notify', { message: 'Kopiert' });
+  }
+
+  $('cancel').addEventListener('click', () => {
+    if (state.job)
+      api(`/api/jobs/${state.job.id}/cancel`, { method: 'POST' }).catch(
+        () => {},
+      );
+  });
+
+  $('again').addEventListener('click', () => {
+    state.job = null;
+    $('progress').hidden = true;
+    $('form').hidden = false;
+    checkBridge();
+  });
+
+  // Plugin messages
+
+  window.onmessage = event => {
+    const msg = event.data.pluginMessage;
+    if (!msg) return;
+    if (msg.type === 'stored-code') {
+      state.code = msg.code;
+      $('code').value = msg.code;
+      checkBridge();
+    } else if (msg.type === 'selection') {
+      const button = $('use-selection');
+      button.disabled = !msg.image;
+      button.textContent = msg.image
+        ? `Bruk «${msg.image.name}»`
+        : 'Bruk markert bilde';
+    } else if (msg.type === 'selected-image') {
+      setPhoto(msg.bytes, msg.name);
+    } else if (msg.type === 'inserted') {
+      state.inserted = true;
+      finish();
+    } else if (msg.type === 'error') {
+      post('notify', { message: msg.message, error: true });
+      if (state.job && state.job.state === 'done' && !state.inserted) {
+        $('job-error').hidden = false;
+        $(
+          'job-error',
+        ).textContent = `Kunne ikke sette inn i Figma: ${msg.message}`;
+        finish();
+      }
+    }
+  };
+
+  post('ready');
+</script>
