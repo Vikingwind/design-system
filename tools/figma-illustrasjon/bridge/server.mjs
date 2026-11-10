@@ -254,6 +254,16 @@ const server = http.createServer((req, res) => {
   });
 });
 
+server.on('error', error => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(
+      `Port ${config.port} er opptatt: broen kjører trolig allerede i et annet vindu. Bruk den, eller stopp den med Ctrl+C der og start på nytt.`,
+    );
+    process.exit(1);
+  }
+  throw error;
+});
+
 server.listen(config.port, '127.0.0.1', async () => {
   const s = await status(config);
   const yes = ok => (ok ? 'ja' : 'NEI');
