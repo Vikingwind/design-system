@@ -48,10 +48,13 @@ export function generationPrompt(
     let drop = false;
     const filled = line.replace(/\[([^\]]+)\]/g, (_, slot) => {
       if (slot.startsWith('one sentence')) return sentence;
+      // Every library animal has one small peach area (SKILL.md rules 18–19).
       if (slot === 'which')
         return (
           peach?.trim() ||
-          'one small prop in the scene, or no Peach at all if there is no prop'
+          (animal
+            ? 'one small prop the animal holds, wears or has beside it (a collar, a ball, a ticket, a leaf), or one marking of its own (a chest patch, horns)'
+            : 'one small prop in the scene, or no Peach at all if there is no prop')
         );
       if (slot.includes(' | ')) return slot.split(' | ')[0];
       if (slot.startsWith('Entur staff:')) {

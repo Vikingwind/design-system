@@ -473,7 +473,11 @@
       </div>
       <div>
         <label for="peach">Fersken-element</label>
-        <input id="peach" type="text" placeholder="skiltet" />
+        <input
+          id="peach"
+          type="text"
+          placeholder="halsbånd, ball, brystflekk"
+        />
       </div>
     </div>
   </section>
@@ -1011,6 +1015,8 @@
       state.kind = button.dataset.kind;
       for (const b of document.querySelectorAll('#kind button[data-kind]'))
         b.setAttribute('aria-pressed', String(b === button));
+      $('peach').placeholder =
+        state.kind === 'animal' ? 'halsbånd, ball, brystflekk' : 'skiltet';
       state.references = [];
       $('refs').replaceChildren();
       renderBridge();
