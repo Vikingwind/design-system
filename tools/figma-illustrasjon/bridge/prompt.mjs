@@ -4,6 +4,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+const NO_CORAL = '__NO_CORAL__';
+
 function read(skillDir, file) {
   return fs.readFileSync(path.join(skillDir, file), 'utf8');
 }
@@ -56,7 +58,11 @@ export function generationPrompt(
             ? 'one small prop the animal holds, wears or has beside it (a collar, a ball, a ticket, a leaf), or one marking of its own (a chest patch, horns)'
             : 'one small prop in the scene, or no Peach at all if there is no prop')
         );
-      if (slot.includes(' | ')) return slot.split(' | ')[0];
+      // Coral: the library has none on animals, people or objects, only on
+      // Entur staff uniforms and transport lines. The plugin draws neither,
+      // so the coral sentence goes (below).
+      if (slot.includes(' | '))
+        return /Entur staff/.test(slot) ? NO_CORAL : slot.split(' | ')[0];
       if (slot.startsWith('Entur staff:')) {
         drop = true;
         return '';
@@ -72,7 +78,13 @@ export function generationPrompt(
       }
       throw new Error(`Ukjent felt i promptmalen: [${slot}]`);
     });
-    if (!drop) out.push(filled.replace(/\s+$/, '').replace(/\.\.$/, '.'));
+    const plain = filled.replace(
+      /[^.]*__NO_CORAL__[^.]*\.?/,
+      ` No coral or red (#FF5959) anywhere, not on ${
+        animal ? 'a comb, a wattle or a tongue' : 'lips, cheeks or clothes'
+      } either.`,
+    );
+    if (!drop) out.push(plain.replace(/\s+$/, '').replace(/\.\.$/, '.'));
   }
   if (!references) return withoutReferences(out, md, animal).join('\n').trim();
   if (hasPhoto)
