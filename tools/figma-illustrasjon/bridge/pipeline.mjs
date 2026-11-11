@@ -355,7 +355,10 @@ async function trace(job, config, { step, log }, { dir, name, draft }) {
     config.illustratorApp,
   ];
   if (input.kind === 'animal') {
-    args.push('--construction', 'animals', '--backdrop');
+    args.push('--construction', 'animals');
+    // Off for a draft with no disc behind the animal, as some library
+    // animals are drawn.
+    if (input.backdrop !== false) args.push('--backdrop');
     if (underlay) args.push('--underlay');
     if (config.carriersFile && fs.existsSync(config.carriersFile))
       args.push('--carriers', config.carriersFile);
@@ -395,14 +398,20 @@ function runTrace(job, args, log) {
   });
 }
 
-// osascript's message is the useful part of the trace script's stack trace.
+// osascript's message, and the line of the trace script's ExtendScript that
+// failed, are the useful part of its stack trace.
 function traceError(stderr, code) {
-  const apple = stderr.match(/execution error: (.*?)(?:\\n|'|\n|$)/);
   if (/-1712/.test(stderr))
     return 'Illustrator brukte mer enn 30 minutter, og trace-scriptet ga opp. Lukk store dokumenter i Illustrator og prøv igjen; det som ble ferdig, ligger i mappa.';
-  return `Trace feilet (kode ${code}): ${
-    apple ? apple[1] : stderr.trim().slice(-600)
-  }`;
+  const message = stderr.match(/execution error: ([^\r\n]*)/)?.[1];
+  const line = stderr.match(/Line: (\d+)/)?.[1];
+  const source = stderr.match(/->\s*([^\r\n]*)/)?.[1] || '';
+  const hint = /\bdisc\b|\bring\b|\brim\b|cleared|backdrop/i.test(source)
+    ? '. Feilen kom i steget for bakgrunnssirkelen. Har utkastet ingen sirkel bak dyret, slå av Bakgrunnssirkel og prøv igjen.'
+    : '';
+  return `Trace feilet i Illustrator${
+    line ? ` (linje ${line} i trace-scriptet)` : ` (kode ${code})`
+  }: ${message || stderr.trim().slice(-400)}${hint}`;
 }
 
 export function illustratorDocuments(app) {

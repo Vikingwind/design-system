@@ -76,7 +76,8 @@ Velg **Dyr** eller **Person** og skriv én setning om motivet: hvem, hva de gjø
 2. Tegn et kvadrat (for eksempel 1024 × 1024) og la det være markert, åpne **Actions → Make an image**, og lim inn prompten. Legg gjerne ved to til tre biblioteks-PNG-er som referanser med **+** i promptfeltet; det holder stilen nærmere biblioteket. Filene ligger i `apps/documentation/src/downloads/illustrations/<Kategori>/<Motiv>/PNG/`; for dyr, bruk `-background`-versjonen.
 3. Marker bildet Figma laget, og trykk **Bruk «…»**.
 4. Står det en Anthropic-nøkkel i config-fila, kan du trykke **Vurder utkastet med Claude**. Du får avvikene og en rettelse du kan lime inn i **Edit with prompt** på bildet. Marker det nye bildet og vurder eller spor det.
-5. Trykk **Spor utkastet**.
+5. For dyr: la **Bakgrunnssirkel** stå på hvis utkastet har en sirkel bak dyret. Da bytter tracen den med bibliotekets sirkel. Har utkastet ingen sirkel, som to måker i lufta, slår du den av.
+6. Trykk **Spor utkastet**. Feiler sporingen, sier panelet hvorfor, og **Prøv igjen** starter samme jobb på nytt. **Ny illustrasjon** tar deg tilbake til skjemaet med det du har fylt ut, så du kan endre noe først.
 
 Bildet som spores, skal være strekutkastet, ikke et foto. Broen avviser bilder som ikke er kvadratiske, og bilder som ser ut som foto, før noe går til Illustrator. Et foto eller en stockillustrasjon kan ikke spores; beskriv motivet med ord i stedet.
 

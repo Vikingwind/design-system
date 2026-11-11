@@ -23,7 +23,7 @@ import {
 // The panel compares this with its own BRIDGE_VERSION (ui.html) and asks
 // for a restart when an older bridge is still running. Bump both together
 // when the panel and the bridge change what they send each other.
-const VERSION = 2;
+const VERSION = 3;
 const MAX_BODY = 40 * 1024 * 1024;
 const jobs = new Map();
 let active = null;

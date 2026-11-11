@@ -543,6 +543,15 @@
   </section>
 
   <section class="block">
+    <div id="backdrop-row">
+      <label class="check"
+        ><input type="checkbox" id="backdrop" checked /> Bakgrunnssirkel</label
+      >
+      <p class="meta">
+        Bytter sirkelen i utkastet med bibliotekets sirkel. Slå av hvis utkastet
+        ikke har en sirkel bak dyret.
+      </p>
+    </div>
     <label class="check"
       ><input type="checkbox" id="with-draft" checked /> Sett inn utkastet ved
       siden av</label
@@ -576,13 +585,14 @@
     <pre id="log"></pre>
   </details>
   <div class="actions">
+    <button type="button" class="primary" id="retry" hidden>Prøv igjen</button>
     <button type="button" id="again" hidden>Ny illustrasjon</button>
   </div>
 </section>
 
 <script>
   const BRIDGE = 'http://localhost:7317';
-  const BRIDGE_VERSION = 2;
+  const BRIDGE_VERSION = 3;
   const STEPS = [
     ['references', 'Stilreferanser'],
     ['draft', 'Utkast'],
@@ -927,6 +937,7 @@
         b.setAttribute('aria-pressed', String(b === button));
       $('peach').placeholder =
         state.kind === 'animal' ? 'halsbånd, ball, brystflekk' : 'skiltet';
+      $('backdrop-row').hidden = state.kind !== 'animal';
       state.references = [];
       $('refs').replaceChildren();
       renderBridge();
@@ -1016,19 +1027,25 @@
 
   // Job
 
-  $('form').addEventListener('submit', async event => {
+  $('form').addEventListener('submit', event => {
     event.preventDefault();
     $('start').disabled = true;
+    startJob({
+      kind: state.kind,
+      description: $('description').value.trim(),
+      name: $('name').value.trim(),
+      peach: $('peach').value.trim(),
+      image: state.photo,
+      references: selectedRefs(),
+      backdrop: state.kind === 'animal' && $('backdrop').checked,
+      compare: $('compare').checked,
+    });
+  });
+
+  // Starts a job; «Prøv igjen» sends the same body again.
+  async function startJob(body) {
+    state.lastBody = body;
     try {
-      const body = {
-        kind: state.kind,
-        description: $('description').value.trim(),
-        name: $('name').value.trim(),
-        peach: $('peach').value.trim(),
-        image: state.photo,
-        references: selectedRefs(),
-        compare: $('compare').checked,
-      };
       const job = await (
         await api('/api/jobs', {
           method: 'POST',
@@ -1043,6 +1060,7 @@
       $('form').hidden = true;
       $('progress').hidden = false;
       $('again').hidden = true;
+      $('retry').hidden = true;
       $('cancel').hidden = false;
       $('result').hidden = true;
       $('job-error').hidden = true;
@@ -1053,7 +1071,7 @@
       post('notify', { message: e.message, error: true });
       renderStart();
     }
-  });
+  }
 
   async function poll() {
     if (!state.job) return;
@@ -1169,6 +1187,7 @@
     const job = state.job;
     $('cancel').hidden = true;
     $('again').hidden = false;
+    $('retry').hidden = job.state === 'done' || !state.lastBody;
     renderJob();
     if (job.state !== 'done') return;
     const result = $('result');
@@ -1247,6 +1266,11 @@
       api(`/api/jobs/${state.job.id}/cancel`, { method: 'POST' }).catch(
         () => {},
       );
+  });
+
+  $('retry').addEventListener('click', () => {
+    $('retry').hidden = true;
+    startJob(state.lastBody);
   });
 
   $('again').addEventListener('click', () => {
