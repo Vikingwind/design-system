@@ -1136,6 +1136,7 @@
       state.job = job;
       state.images = {};
       state.inserted = false;
+      state.binding = '';
       $('form').hidden = true;
       $('progress').hidden = false;
       $('again').hidden = true;
@@ -1275,6 +1276,11 @@
       job.cost.claude ? ` · Claude ${usd(job.cost.claude)}` : ''
     }`;
     lines.push(cost);
+    if (state.binding) {
+      const binding = document.createElement('div');
+      binding.textContent = state.binding;
+      lines.push(binding);
+    }
     if (job.remaining && job.remaining.length) {
       const left = document.createElement('div');
       left.textContent = `Avvik igjen etter vurderingen: ${job.remaining.join(
@@ -1351,6 +1357,7 @@
       setPhoto(msg.bytes, msg.name);
     } else if (msg.type === 'inserted') {
       state.inserted = true;
+      state.binding = msg.binding || '';
       finish();
     } else if (msg.type === 'error') {
       post('notify', { message: msg.message, error: true });

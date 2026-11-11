@@ -97,6 +97,19 @@ Broen lager utkastet selv, med stilreferansene og skillens prompt. Legg eventuel
 
 Pluginen setter inn en seksjon med de tre fargemodusene på sine flater (hvit, Ebony 100 og Lavender 90), utkastet ved siden av og ett biblioteksmotiv i de samme tre modusene under, til sammenligning. Rammene har flaten som fyll så du ser modusene riktig; fjern fyllet hvis du eksporterer rammen.
 
+**Fargevariabler:** Pluginen kobler hver farge i de tre rammene til variablene i biblioteket **Tokens-Illustration colors** (samlingen Illustration colors), slik komponentene i Illustration Library er bygd. Biblioteket må være slått på i fila.
+
+| Farge i tracen    | Dyr               | Personer                                |
+| ----------------- | ----------------- | --------------------------------------- |
+| Strek             | `Line/Body`       | `Line/Default` (fylt: `Fill/Default`)   |
+| Papir (hvitt)     | `Fill/Body`       | `Fill/Skin`                             |
+| Grått (`tint`)    | `Fill/BodyShadow` | –                                       |
+| Bakgrunnssirkelen | `Fill/Circle`     | –                                       |
+| Peach             | `Fill/Highlight`  | `Fill/Highlight 1`                      |
+| Lavendel / coral  | –                 | `Fill/Highlight 2` / `Fill/Highlight 3` |
+
+Standard- og darkmode-rammen bruker `Animal/Standard/…` eller `People/Standard/…`, og kontrastrammen `…/Contrast/…`. Darkmode-rammen står i modusen **Dark**, de to andre i **Light**, så du kan bytte modus på rammen som på en bibliotekskomponent. Farger uten variabel blir stående og står i panelet etter innsettingen. På personer får alt papir `Fill/Skin`; klær som skal bli Ebony 30 i mørk modus, bytter du selv til `Fill/Cloth`.
+
 Hver jobb får en mappe i `outputDir` med utkastene (`utkast-1.png` …), prompten, vurderingene, `jobb.json` og resultatet: `<Navn>.ai` med levende strøk og `<Navn>.svg`, `<Navn>-darkmode.svg` og `<Navn>-contrast.svg`. Panelet viser stien til `.ai`-fila. Rammene i Figma er kopier: endrer du `.ai`-fila senere, må du lime eller importere den inn i Figma på nytt, og en ny trace gir en ny seksjon.
 
 ## Kostnader
@@ -116,7 +129,7 @@ Panelet viser kostnaden før en fal.ai-jobb og den faktiske summen etterpå, reg
 - **Figma tegner ikke for pluginen.** En plugin har ikke tilgang til Figmas bildegenerering, så i Figma-modus lager du utkastet selv med **Make an image**.
 - **Noe etterarbeid gjenstår.** På dyr legger tracen tilbake øyne og neser og lager én enkel bakkelinje. Skillens øvrige finish-steg gjøres i `.ai`-fila: hodestørrelse, glatt hår, 2–5 foldemerker og enklere tilbehør på personer, og hvite felt mellom beina på dyr. MCP-verktøyene i `scripts/illustrator-mcp.mjs` hjelper.
 - **Breddeprofilene finnes bare i `.ai`-fila.** En linje med breddeprofil kan ikke være et SVG-strøk, så SVG-en, og dermed Figma, får dyrelinjene som fylte konturer, slik bibliotekets egne eksporter.
-- **Mørk modus kjenner ikke `cloth` og `vehicle`.** Tracen gjør all hvit om til `paper`. Klær og kjøretøy farges om for hånd i mørk modus.
+- **Mørk modus kjenner ikke `cloth` og `vehicle`.** Tracen gjør all hvit om til `paper`, og pluginen kobler den til `Fill/Skin` på personer. Klær og kjøretøy kobles om for hånd til `Fill/Cloth` og transportvariablene.
 - **Tracen tar fra sekunder til minutter.** Et utkast på 1024 px tok 12 sekunder med noen få små dokumenter åpne i Illustrator, men 14 minutter med åtte dokumenter åpne, blant dem de store kildefilene i biblioteket. Trace-scriptet gir opp etter 30 minutter. Panelet advarer når Illustrator har mer enn to dokumenter åpne.
 - **Vurderingen er en hjelp, ikke sjekken.** Sammenlign resultatet med biblioteksmotivet i alle tre modusene før det tas i bruk, og send nye motiver til `#talk-designsystem`.
 - **Én jobb om gangen.** **Avbryt** stopper broen, men et trace-script som alt kjører i Illustrator, går ferdig.

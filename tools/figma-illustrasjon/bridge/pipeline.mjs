@@ -316,6 +316,7 @@ export async function runJob(job, config) {
     cleanSvg(fs.readFileSync(path.join(dir, `${name}${suffix}.svg`), 'latin1'));
   job.result = {
     name,
+    kind: input.kind,
     dir,
     ai: path.join(dir, `${name}.ai`),
     svgs: {
