@@ -582,6 +582,7 @@
 
 <script>
   const BRIDGE = 'http://localhost:7317';
+  const BRIDGE_VERSION = 2;
   const STEPS = [
     ['references', 'Stilreferanser'],
     ['draft', 'Utkast'],
@@ -659,6 +660,16 @@
     setTimeout(checkBridge, state.status && state.status.paired ? 15000 : 4000);
   }
 
+  // The bridge reads its code once, when it starts; the panel loads fresh
+  // each time it opens. After an update an old bridge can still be running,
+  // so the two compare versions. Bump BRIDGE_VERSION here and VERSION in
+  // bridge/server.mjs together whenever the panel and the bridge change
+  // what they send each other.
+  function outdated() {
+    const s = state.status;
+    return Boolean(s && !s.configError && s.version !== BRIDGE_VERSION);
+  }
+
   function renderBridge() {
     const s = state.status;
     const pill = $('bridge-state');
@@ -671,6 +682,9 @@
     } else if (s.configError) {
       pill.textContent = 'Feil i config';
       pill.classList.add('bad');
+    } else if (outdated()) {
+      pill.textContent = 'Start broen på nytt';
+      pill.classList.add('bad');
     } else if (!s.paired) {
       pill.textContent = 'Ikke koblet til';
     } else {
@@ -680,6 +694,11 @@
 
     const warnings = [];
     if (s && s.configError) warnings.push(['bad', s.configError]);
+    if (outdated())
+      warnings.push([
+        'bad',
+        'Broen kjører en eldre versjon enn pluginen, fra før du oppdaterte. Stopp den med Ctrl+C i Terminal, start den på nytt og åpne pluginen igjen.',
+      ]);
     if (s && s.paired) {
       if (s.platform !== 'darwin')
         warnings.push(['bad', 'Broen krever macOS og Illustrator.']);
@@ -860,6 +879,7 @@
       input.disabled = !input.checked && refs >= 4;
     $('start').disabled = !(
       s &&
+      !outdated() &&
       s.paired &&
       s.skill &&
       state.photo &&

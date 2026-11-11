@@ -20,6 +20,10 @@ import {
   runJob,
 } from './pipeline.mjs';
 
+// The panel compares this with its own BRIDGE_VERSION (ui.html) and asks
+// for a restart when an older bridge is still running. Bump both together
+// when the panel and the bridge change what they send each other.
+const VERSION = 2;
 const MAX_BODY = 40 * 1024 * 1024;
 const jobs = new Map();
 let active = null;
@@ -33,6 +37,7 @@ async function status(config) {
   const running = illustratorRunning(config.illustratorApp);
   return {
     bridge: 'entur-illustrasjon',
+    version: VERSION,
     platform: process.platform,
     skill: fs.existsSync(traceScript),
     library: fs.existsSync(config.libraryDir),
@@ -159,6 +164,7 @@ async function handle(req, res) {
     if (url.pathname === '/api/status')
       return send(res, 200, {
         bridge: 'entur-illustrasjon',
+        version: VERSION,
         configError: error.message,
       });
     throw error;
@@ -279,7 +285,9 @@ server.on('error', error => {
 server.listen(config.port, '127.0.0.1', async () => {
   const s = await status(config);
   const yes = ok => (ok ? 'ja' : 'NEI');
-  console.log(`Entur illustrasjon – bro på http://localhost:${config.port}`);
+  console.log(
+    `Entur illustrasjon – bro v${VERSION} på http://localhost:${config.port}`,
+  );
   console.log(`Config:   ${configFile}`);
   console.log(
     `Parkode:  ${config.pairingCode}  (lim inn i pluginen første gang)`,
