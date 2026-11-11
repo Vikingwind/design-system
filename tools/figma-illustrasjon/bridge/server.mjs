@@ -4,15 +4,14 @@
 //
 //   node tools/figma-illustrasjon/bridge/server.mjs
 
+import { execFile } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 
 import { configFile, loadConfig } from './config.mjs';
-import { FAL_PRICE } from './fal.mjs';
 import {
-  MAX_EDIT_ROUNDS,
   figmaPrompt,
   illustratorDocuments,
   illustratorRunning,
@@ -47,12 +46,8 @@ async function status(config) {
     carriers: Boolean(
       config.carriersFile && fs.existsSync(config.carriersFile),
     ),
-    falKey: Boolean(config.falKey),
     anthropicKey: Boolean(config.anthropicApiKey),
-    falModel: config.falModel,
     reviewModel: config.reviewModel,
-    pricePerImage: FAL_PRICE[config.falResolution] ?? null,
-    maxEditRounds: MAX_EDIT_ROUNDS,
     busy: Boolean(active),
   };
 }
@@ -96,9 +91,7 @@ function publicJob(job) {
     dir: job.dir,
     steps: job.steps,
     log: job.log.slice(-40),
-    drafts: job.drafts.map(({ n, label, review }) => ({ n, label, review })),
-    remaining: job.remaining,
-    cost: job.cost,
+    drafts: job.drafts.map(({ n, label }) => ({ n, label })),
     error: job.error,
     result: job.state === 'done' ? job.result : null,
   };
@@ -109,11 +102,14 @@ async function startJob(input, config) {
     throw Object.assign(new Error('En jobb kjører allerede'), { code: 409 });
   if (!['animal', 'person'].includes(input.kind))
     throw Object.assign(new Error('Velg dyr eller person'), { code: 400 });
-  if (
-    !String(input.description || '').trim() &&
-    !(input.traceOnly && input.name)
-  )
-    throw Object.assign(new Error('Skriv en kort beskrivelse'), { code: 400 });
+  if (!input.image?.data)
+    throw Object.assign(new Error('Legg ved utkastet fra Figma'), {
+      code: 400,
+    });
+  if (!String(input.description || '').trim() && !input.name)
+    throw Object.assign(new Error('Skriv en kort beskrivelse eller et navn'), {
+      code: 400,
+    });
   const job = {
     id: crypto.randomUUID(),
     state: 'running',
@@ -121,8 +117,6 @@ async function startJob(input, config) {
     steps: {},
     log: [],
     drafts: [],
-    remaining: null,
-    cost: { fal: 0, claude: 0 },
     abort: new AbortController(),
   };
   jobs.set(job.id, job);
@@ -236,6 +230,20 @@ async function handle(req, res) {
     return send(res, 200, publicJob(job));
   }
 
+  // Opens the job's own .ai file in the configured Illustrator. The path comes
+  // from the job, never from the request.
+  if (job && parts[3] === 'open' && req.method === 'POST') {
+    const file = job.state === 'done' ? job.result.ai : null;
+    if (!file || !fs.existsSync(file))
+      return send(res, 404, { error: 'Fant ikke Illustrator-fila' });
+    await new Promise((resolve, reject) =>
+      execFile('open', ['-a', config.illustratorApp, file], error =>
+        error ? reject(error) : resolve(),
+      ),
+    );
+    return send(res, 200, { opened: file });
+  }
+
   if (job && parts[3] === 'drafts' && req.method === 'GET') {
     const draft = job.drafts.find(d => d.n === Number(parts[4]));
     if (!draft) return send(res, 404, { error: 'Fant ikke utkastet' });
@@ -248,8 +256,12 @@ async function handle(req, res) {
 const config = loadConfig();
 const server = http.createServer((req, res) => {
   handle(req, res).catch(error => {
+    // A system error carries a string code (ENOENT); only our own errors
+    // carry an HTTP status.
     if (!res.headersSent)
-      send(res, error.code || 500, { error: error.message });
+      send(res, Number.isInteger(error.code) ? error.code : 500, {
+        error: error.message,
+      });
     else res.end();
   });
 });
@@ -283,11 +295,10 @@ server.listen(config.port, '127.0.0.1', async () => {
   console.log(
     `Carriers: ${config.carriersFile || '(ikke satt)'}  ${yes(s.carriers)}`,
   );
-  console.log(
-    `fal.ai-nøkkel: ${yes(s.falKey)}   Anthropic-nøkkel: ${yes(
-      s.anthropicKey,
-    )}`,
-  );
+  if (s.anthropicKey)
+    console.log(
+      'Anthropic-nøkkel: ja (vurdering over API-et, utenom godkjente verktøy)',
+    );
   if (process.platform !== 'darwin')
     console.log('Advarsel: tracen krever macOS og Illustrator.');
 });

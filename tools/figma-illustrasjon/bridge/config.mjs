@@ -27,9 +27,6 @@ const DEFAULTS = {
   ),
   illustratorApp: '/Applications/Adobe Illustrator 2026/Adobe Illustrator.app',
   carriersFile: '',
-  falKey: '',
-  falModel: 'fal-ai/nano-banana-2/edit',
-  falResolution: '2K',
   anthropicApiKey: '',
   anthropicBaseUrl: 'https://api.anthropic.com',
   reviewModel: 'claude-opus-5-5',
@@ -38,7 +35,6 @@ const DEFAULTS = {
 
 // The keys the user edits, written to a new config file with empty values.
 const TEMPLATE_KEYS = [
-  'falKey',
   'anthropicApiKey',
   'carriersFile',
   'outputDir',
@@ -83,7 +79,6 @@ export function loadConfig() {
     writeFile(stored);
   }
   const config = { ...DEFAULTS, ...stored };
-  config.falKey ||= process.env.FAL_KEY || '';
   config.anthropicApiKey ||= process.env.ANTHROPIC_API_KEY || '';
   for (const key of ['outputDir', 'skillDir', 'libraryDir', 'carriersFile'])
     if (config[key]) config[key] = expandHome(config[key]);

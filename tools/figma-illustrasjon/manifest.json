@@ -9,6 +9,6 @@
   "networkAccess": {
     "allowedDomains": ["none"],
     "devAllowedDomains": ["http://localhost:7317"],
-    "reasoning": "Pluginen snakker bare med en lokal bro på brukerens egen Mac (tools/figma-illustrasjon/bridge). Broen lager utkastet med bildemodellen, sporer det i Illustrator og sender SVG-ene tilbake. Pluginen sender ingenting til andre domener."
+    "reasoning": "Pluginen snakker bare med en lokal bro på brukerens egen Mac (tools/figma-illustrasjon/bridge). Broen sporer utkastet fra Figma i Illustrator og sender SVG-ene tilbake. Pluginen sender ingenting til andre domener."
   }
 }

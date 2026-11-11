@@ -1,12 +1,12 @@
-// One illustration job: style references → draft (fal.ai) → optional review
-// and edit rounds (Claude) → trace in Illustrator with the skill's script.
+// One illustration job: style references → the designer's draft from Figma
+// → trace in Illustrator with the skill's script. Only tools Entur has
+// approved take part: Figma makes the draft, Illustrator traces it.
 
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { FAL_PRICE, dataUri, falImage } from './fal.mjs';
 import { generationPrompt, reviewBrief } from './prompt.mjs';
 import { reviewDraft } from './review.mjs';
 
@@ -21,7 +21,6 @@ const DEFAULT_REFERENCES = {
     'Woman walking with luggage',
   ],
 };
-export const MAX_EDIT_ROUNDS = 2;
 
 // File names in the library vary (Sheep-darkmode, Kitty_Dark, Hamster_default,
 // Dog-1): pick by what the name contains, shortest name first.
@@ -178,7 +177,7 @@ function checkDraft(file, dir) {
     );
   if (paperShare(file, dir) < 0.3)
     throw new Error(
-      'Bildet ser ut som et foto, ikke et strekutkast i Linje-stil. Lag utkastet i Figma med prompten først, og spor det. Et foto kan bare gi motiv og positur, gjennom fal.ai.',
+      'Bildet ser ut som et foto, ikke et strekutkast i Linje-stil. Lag utkastet i Figma med prompten først, og spor det.',
     );
 }
 
@@ -273,42 +272,22 @@ export async function runJob(job, config) {
   const references = loadReferences(config, input.kind, input.references);
   step('references', 'done', references.map(r => r.name).join(', '));
 
-  // The user's picture: a photo for the request (at most 1536 px), or a
-  // finished draft that is traced as it is.
-  let picture = null;
-  if (input.image?.data) {
-    const ext = (input.image.mime || 'image/png')
-      .split('/')[1]
-      .replace('jpeg', 'jpg');
-    const original = path.join(dir, `bilde-original.${ext}`);
-    fs.writeFileSync(original, Buffer.from(input.image.data, 'base64'));
-    const png = path.join(dir, 'bilde.png');
-    sipsToPng(original, png, input.traceOnly ? 0 : 1536);
-    picture = fs.readFileSync(png);
-  }
+  // 2. The draft the designer made with Figma's image generation, traced as it is.
+  if (!input.image?.data) throw new Error('Legg ved utkastet som skal spores');
+  const ext = (input.image.mime || 'image/png')
+    .split('/')[1]
+    .replace('jpeg', 'jpg');
+  const original = path.join(dir, `bilde-original.${ext}`);
+  fs.writeFileSync(original, Buffer.from(input.image.data, 'base64'));
+  const png = path.join(dir, 'bilde.png');
+  sipsToPng(original, png);
+  checkDraft(png, dir);
+  const draft = fs.readFileSync(png);
+  saveDraft(job, dir, draft, 'Utkast fra Figma');
+  step('draft', 'done', 'fra Figma');
 
-  // 2–3. Draft, review and edit rounds
+  // 3. Trace
   check();
-  let draft;
-  if (input.traceOnly) {
-    if (!picture) throw new Error('Legg ved utkastet som skal spores');
-    checkDraft(path.join(dir, 'bilde.png'), dir);
-    draft = picture;
-    saveDraft(job, dir, draft, 'Eget utkast');
-    step('draft', 'done', 'eget utkast');
-    step('review', 'skipped');
-  } else {
-    draft = await generate(job, config, ctx, {
-      dir,
-      references,
-      photo: picture,
-    });
-    draft = input.review
-      ? await review(job, config, ctx, { dir, references, draft })
-      : (step('review', 'skipped'), draft);
-  }
-
-  // 4. Trace
   check();
   await trace(job, config, ctx, { dir, name, draft });
 
@@ -341,139 +320,12 @@ export async function runJob(job, config) {
       {
         input: { ...input, image: input.image ? '(bilde)' : null },
         references: references.map(r => r.png),
-        cost: job.cost,
-        remaining: job.remaining,
         log: job.log,
       },
       null,
       2,
     )}\n`,
   );
-}
-
-function falSettings(config, job) {
-  return {
-    fal: {
-      key: config.falKey,
-      model: config.falModel,
-      signal: job.abort.signal,
-    },
-    settings: {
-      resolution: config.falResolution,
-      aspect_ratio: '1:1',
-      output_format: 'png',
-      num_images: 1,
-    },
-    price: FAL_PRICE[config.falResolution] ?? 0,
-  };
-}
-
-async function generate(
-  job,
-  config,
-  { step, log },
-  { dir, references, photo },
-) {
-  const { input } = job;
-  if (!config.falKey) throw new Error('fal.ai-nøkkelen mangler i config-fila');
-  const prompt = generationPrompt(config.skillDir, {
-    kind: input.kind,
-    scene: input.description,
-    peach: input.peach,
-    hasPhoto: Boolean(photo),
-  });
-  fs.writeFileSync(path.join(dir, 'prompt.txt'), `${prompt}\n`);
-  const { fal, settings, price } = falSettings(config, job);
-
-  step('draft', 'running');
-  const { bytes } = await falImage({
-    ...fal,
-    input: {
-      prompt,
-      image_urls: [
-        ...references.map(r => dataUri(r.bytes)),
-        ...(photo ? [dataUri(photo)] : []),
-      ],
-      ...settings,
-    },
-    onStatus: s => step('draft', 'running', s),
-  });
-  job.cost.fal += price;
-  saveDraft(job, dir, bytes, 'Utkast');
-  step('draft', 'done');
-  log('Utkast 1 er klart');
-  return bytes;
-}
-
-async function review(
-  job,
-  config,
-  { step, log, check },
-  { dir, references, draft },
-) {
-  const { input } = job;
-  if (!config.anthropicApiKey)
-    throw new Error('Anthropic-nøkkelen mangler i config-fila');
-  const { fal, settings, price } = falSettings(config, job);
-  const claude = {
-    apiKey: config.anthropicApiKey,
-    baseUrl: config.anthropicBaseUrl,
-    model: config.reviewModel,
-    brief: reviewBrief(config.skillDir),
-    kind: input.kind,
-    scene: input.description,
-    references,
-    signal: job.abort.signal,
-  };
-  for (let round = 0; ; round++) {
-    check();
-    step('review', 'running', `vurdering ${round + 1}`);
-    const verdict = await reviewDraft({ ...claude, draft });
-    job.cost.claude += verdict.cost || 0;
-    job.drafts[job.drafts.length - 1].review = {
-      approved: verdict.approved,
-      deviations: verdict.deviations,
-    };
-    fs.writeFileSync(
-      path.join(dir, `vurdering-${round + 1}.json`),
-      `${JSON.stringify(verdict, null, 2)}\n`,
-    );
-    log(
-      verdict.approved
-        ? `Vurdering ${round + 1}: godkjent`
-        : `Vurdering ${round + 1}: ${verdict.deviations.length} avvik`,
-    );
-    if (verdict.approved || round >= MAX_EDIT_ROUNDS) {
-      job.remaining = verdict.approved ? [] : verdict.deviations;
-      step(
-        'review',
-        'done',
-        verdict.approved ? 'godkjent' : 'avvik igjen etter to runder',
-      );
-      return draft;
-    }
-
-    check();
-    step('review', 'running', `redigering ${round + 1}`);
-    // raster-first.md §3: the draft goes first, the reference that shows the fix second.
-    const fix = references[verdict.fix_reference - 1];
-    fs.writeFileSync(
-      path.join(dir, `redigering-${round + 1}.txt`),
-      `${verdict.edit_prompt}\n`,
-    );
-    const edited = await falImage({
-      ...fal,
-      input: {
-        prompt: verdict.edit_prompt,
-        image_urls: [dataUri(draft), ...(fix ? [dataUri(fix.bytes)] : [])],
-        ...settings,
-      },
-      onStatus: s => step('review', 'running', `redigering ${round + 1}: ${s}`),
-    });
-    job.cost.fal += price;
-    draft = edited.bytes;
-    saveDraft(job, dir, draft, `Redigering ${round + 1}`);
-  }
 }
 
 async function trace(job, config, { step, log }, { dir, name, draft }) {

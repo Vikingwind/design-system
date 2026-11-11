@@ -484,21 +484,11 @@
 
   <section class="block">
     <div class="field">
-      <label id="source-label">Utkast fra</label>
-      <div
-        class="segmented"
-        role="group"
-        aria-labelledby="source-label"
-        id="source"
-      >
-        <button type="button" data-source="figma" aria-pressed="true">
-          Figma
-        </button>
-        <button type="button" data-source="fal" aria-pressed="false">
-          fal.ai
-        </button>
-      </div>
-      <p class="meta" id="source-help"></p>
+      <label>Utkast fra Figma</label>
+      <p class="meta">
+        Du lager utkastet selv i Figma med prompten under. Det bruker
+        AI-kredittene i Figma-planen, og tracen er gratis.
+      </p>
     </div>
 
     <div class="field" id="figma-prompt">
@@ -508,16 +498,16 @@
       </div>
       <textarea id="prompt" rows="6" readonly></textarea>
       <p class="meta">
-        Lim den inn i Figmas bildegenerering og be om et kvadratisk bilde. Figma
-        tar ingen stilreferanser, så stilen glir mer enn med fal.ai.
+        Lim den inn i Make an image og be om et kvadratisk bilde. Legg gjerne
+        ved to eller tre biblioteks-PNG-er med +, så holder stilen seg nærmere
+        biblioteket.
       </p>
     </div>
   </section>
 
   <section class="block">
     <div class="row">
-      <span id="image-title">Bilde</span
-      ><span class="meta" id="image-note">valgfritt</span>
+      <span>2. Utkastet fra Figma</span>
     </div>
     <div class="drop" id="drop">
       <span>Slipp et bilde her</span>
@@ -532,16 +522,6 @@
     <div class="photo" id="photo" hidden>
       <span id="photo-name"></span>
       <button type="button" id="photo-remove">Fjern</button>
-    </div>
-    <div id="trace-only-row" hidden>
-      <label class="check"
-        ><input type="checkbox" id="trace-only" /> Bildet er et ferdig utkast:
-        spor det direkte</label
-      >
-      <p class="meta">
-        Hopper over bildemodellen og vurderingen. Bruk et kvadratisk PNG-utkast,
-        for eksempel fra Weave.
-      </p>
     </div>
     <div id="figma-review" hidden>
       <div class="actions">
@@ -563,16 +543,6 @@
   </section>
 
   <section class="block">
-    <div id="review-row">
-      <label class="check"
-        ><input type="checkbox" id="review" /> Automatisk vurdering med
-        Claude</label
-      >
-      <p class="meta" id="review-help">
-        Claude ser utkastet mot referansene og sjekklisten i skillen, og retter
-        avvik i opptil to redigeringsrunder.
-      </p>
-    </div>
     <label class="check"
       ><input type="checkbox" id="with-draft" checked /> Sett inn utkastet ved
       siden av</label
@@ -584,10 +554,9 @@
   </section>
 
   <section class="block">
-    <p class="meta" id="cost"></p>
     <div class="actions">
       <button type="submit" class="primary" id="start" disabled>
-        Lag illustrasjon
+        Spor utkastet
       </button>
     </div>
   </section>
@@ -616,7 +585,6 @@
   const STEPS = [
     ['references', 'Stilreferanser'],
     ['draft', 'Utkast'],
-    ['review', 'Vurdering'],
     ['trace', 'Trace i Illustrator'],
     ['insert', 'Satt inn i Figma'],
   ];
@@ -626,7 +594,6 @@
     code: '',
     status: null,
     kind: 'animal',
-    source: 'figma',
     photo: null,
     references: [],
     job: null,
@@ -721,8 +688,6 @@
           'bad',
           'Fant ikke skillen entur-illustration. Sett skillDir i config-fila.',
         ]);
-      if (state.source === 'fal' && !s.falKey)
-        warnings.push(['bad', 'fal.ai-nøkkelen mangler i config-fila.']);
       if (!s.illustrator)
         warnings.push(['bad', 'Fant ikke Adobe Illustrator 2026.']);
       else if (!s.illustratorRunning)
@@ -750,64 +715,24 @@
       }),
     );
 
-    const review = $('review');
-    review.disabled = !(s && s.anthropicKey);
-    if (review.disabled) review.checked = false;
-    renderSource();
+    renderDraft();
   }
 
-  const SOURCE_TEXT = {
-    figma: {
-      help: 'Du lager utkastet selv i Figma med prompten under. Det bruker AI-kredittene i Figma-planen, og tracen er gratis.',
-      title: '2. Utkastet fra Figma',
-      note: '',
-      image:
-        'Marker bildet Figma laget fra prompten: et kvadratisk strekutkast på hvit bakgrunn, ikke et foto. Trykk Bruk «…».',
-      review:
-        ' Vurder det gjerne før du sporer: Claude lister avvikene og skriver en rettelse du kan lime inn i Figmas bilderedigering.',
-    },
-    fal: {
-      help: 'Broen lager utkastet hos fal.ai, med biblioteksbildene under som stilreferanser. Det koster per bilde.',
-      title: 'Bilde',
-      note: 'valgfritt',
-      image:
-        'Bruk eget foto eller et fritt lisensiert bilde: det gir motiv og positur, ikke stil. Er bildet en illustrasjon fra andre, beskriv heller scenen med ord.',
-    },
-  };
+  const IMAGE_HELP =
+    'Marker bildet Figma laget fra prompten: et kvadratisk strekutkast på hvit bakgrunn, ikke et foto. Trykk Bruk «…».';
+  const REVIEW_HELP =
+    ' Vurder det gjerne før du sporer: Claude lister avvikene og skriver en rettelse du kan lime inn i Figmas bilderedigering.';
 
-  // fal.ai and the review over the Anthropic API are outside the tools
-  // Entur has approved (Figma, Claude, Illustrator). They show only when a
-  // key for them is in the config file.
-  function renderSource() {
+  // The review over the Anthropic API is outside the tools Entur has
+  // approved (Figma, Claude, Illustrator); it shows only when a key for it
+  // is in the config file.
+  function renderDraft() {
     const s = state.status;
-    const falOn = Boolean(s && s.falKey);
     const reviewOn = Boolean(s && s.anthropicKey);
-    if (!falOn && state.source === 'fal') state.source = 'figma';
-    const figma = state.source === 'figma';
-    const text = SOURCE_TEXT[state.source];
-    $('source').hidden = !falOn;
-    $('source-label').textContent = falOn ? 'Utkast fra' : 'Utkast fra Figma';
-    for (const b of document.querySelectorAll('#source button'))
-      b.setAttribute('aria-pressed', String(b.dataset.source === state.source));
-    $('source-help').textContent = text.help;
-    $('image-title').textContent = text.title;
-    $('image-note').textContent = text.note;
-    $('image-help').textContent =
-      text.image + (reviewOn && text.review ? text.review : '');
-    $('figma-prompt').hidden = !figma;
-    $('trace-only-row').hidden = figma || !state.photo;
-    $('figma-review').hidden = !figma || !state.photo || !reviewOn;
+    $('image-help').textContent = IMAGE_HELP + (reviewOn ? REVIEW_HELP : '');
+    $('figma-review').hidden = !state.photo || !reviewOn;
     $('review-draft').disabled = !reviewOn || state.reviewing;
-    renderCost();
     renderStart();
-  }
-
-  for (const button of document.querySelectorAll('#source button')) {
-    button.addEventListener('click', () => {
-      state.source = button.dataset.source;
-      renderBridge();
-      refreshPrompt();
-    });
   }
 
   let promptTimer = null;
@@ -815,8 +740,7 @@
     clearTimeout(promptTimer);
     promptTimer = setTimeout(async () => {
       const description = $('description').value.trim();
-      const ready =
-        state.source === 'figma' && state.status && state.status.paired;
+      const ready = state.status && state.status.paired;
       $('copy-prompt').disabled = true;
       if (!ready) return;
       if (!description) {
@@ -849,7 +773,7 @@
 
   $('review-draft').addEventListener('click', async () => {
     state.reviewing = true;
-    renderSource();
+    renderDraft();
     const box = $('review-result');
     box.hidden = false;
     box.textContent = 'Claude vurderer utkastet …';
@@ -871,7 +795,7 @@
       box.textContent = `Vurderingen feilet: ${e.message}`;
     }
     state.reviewing = false;
-    renderSource();
+    renderDraft();
   });
 
   function renderVerdict(verdict) {
@@ -922,67 +846,27 @@
 
   // Form
 
-  function renderCost() {
-    const s = state.status;
-    if (!s || !s.pricePerImage) {
-      $('cost').textContent = '';
-      return;
-    }
-    if (state.source === 'figma') {
-      $('cost').textContent =
-        'Utkastet bruker AI-kredittene i Figma-planen, og tracen er gratis. En vurdering med Claude koster omtrent 0,10–0,25 USD.';
-      return;
-    }
-    if (traceOnly()) {
-      $('cost').textContent =
-        'Bare trace i Illustrator: ingen kostnad hos fal.ai eller Claude.';
-      return;
-    }
-    const runs = 1 + ($('review').checked ? s.maxEditRounds : 0);
-    let text = `Bildemodell: opptil ${runs} kjøring${
-      runs > 1 ? 'er' : ''
-    } à ${usd(s.pricePerImage)} hos fal.ai, høyst ${usd(
-      runs * s.pricePerImage,
-    )}.`;
-    if ($('review').checked)
-      text += ` Claude-vurdering: opptil ${
-        s.maxEditRounds + 1
-      } runder, omtrent 0,10–0,25 USD hver.`;
-    $('cost').textContent = text;
-  }
-
   function selectedRefs() {
     return [...document.querySelectorAll('#refs input:checked')].map(
       input => input.value,
     );
   }
 
-  function traceOnly() {
-    return (
-      Boolean(state.photo) &&
-      (state.source === 'figma' || $('trace-only').checked)
-    );
-  }
-
   function renderStart() {
     const s = state.status;
     const refs = selectedRefs().length;
-    const only = traceOnly();
     $('ref-count').textContent = `${refs} valgt, 2–4`;
     for (const input of document.querySelectorAll('#refs input'))
       input.disabled = !input.checked && refs >= 4;
-    $('review-row').hidden = only || state.source === 'figma';
-    $('start').textContent = only ? 'Spor utkastet' : 'Lag illustrasjon';
     $('start').disabled = !(
       s &&
       s.paired &&
       s.skill &&
-      (s.falKey || only) &&
-      (state.source === 'fal' || state.photo) &&
+      state.photo &&
       s.illustrator &&
       !s.busy &&
       refs >= 2 &&
-      ($('description').value.trim() || (only && $('name').value.trim()))
+      ($('description').value.trim() || $('name').value.trim())
     );
   }
 
@@ -1037,11 +921,6 @@
   });
   $('peach').addEventListener('input', refreshPrompt);
   $('name').addEventListener('input', renderStart);
-  $('trace-only').addEventListener('change', () => {
-    renderStart();
-    renderCost();
-  });
-  $('review').addEventListener('change', renderCost);
 
   $('pair').addEventListener('submit', event => {
     event.preventDefault();
@@ -1083,7 +962,7 @@
     $('photo').hidden = false;
     $('drop').hidden = true;
     $('review-result').hidden = true;
-    renderSource();
+    renderDraft();
   }
 
   async function readFile(file) {
@@ -1101,7 +980,7 @@
     $('photo').hidden = true;
     $('drop').hidden = false;
     $('review-result').hidden = true;
-    renderSource();
+    renderDraft();
     $('file').value = '';
   });
 
@@ -1128,8 +1007,6 @@
         peach: $('peach').value.trim(),
         image: state.photo,
         references: selectedRefs(),
-        review: $('review').checked && !traceOnly(),
-        traceOnly: traceOnly(),
         compare: $('compare').checked,
       };
       const job = await (
@@ -1277,22 +1154,18 @@
     const result = $('result');
     result.hidden = false;
     const lines = [];
-    const cost = document.createElement('div');
-    cost.textContent = `Brukt: fal.ai ${usd(job.cost.fal)}${
-      job.cost.claude ? ` · Claude ${usd(job.cost.claude)}` : ''
-    }`;
-    lines.push(cost);
+    const open = document.createElement('div');
+    open.className = 'actions';
+    const openButton = document.createElement('button');
+    openButton.type = 'button';
+    openButton.textContent = 'Åpne i Illustrator';
+    openButton.addEventListener('click', () => openInIllustrator(openButton));
+    open.append(openButton);
+    lines.push(open);
     if (state.binding) {
       const binding = document.createElement('div');
       binding.textContent = state.binding;
       lines.push(binding);
-    }
-    if (job.remaining && job.remaining.length) {
-      const left = document.createElement('div');
-      left.textContent = `Avvik igjen etter vurderingen: ${job.remaining.join(
-        ' ',
-      )}`;
-      lines.push(left);
     }
     for (const [label, value] of [
       ['Illustrator-fil', job.result.ai],
@@ -1318,6 +1191,25 @@
       'Sjekk resultatet mot biblioteksmotivet i alle tre modusene før det brukes. Etterarbeidet i skillen (hode, hår, foldemerker) gjøres i Illustrator-fila.';
     lines.push(note);
     result.replaceChildren(...lines);
+  }
+
+  // The bridge opens the job's own .ai file; the panel cannot start apps.
+  // Not automatic: every document left open in Illustrator slows the next
+  // trace.
+  async function openInIllustrator(button) {
+    button.disabled = true;
+    try {
+      await api(`/api/jobs/${state.job.id}/open`, { method: 'POST' });
+      post('notify', {
+        message: 'Åpnet i Illustrator. Lukk fila før neste trace.',
+      });
+    } catch (e) {
+      post('notify', {
+        message: `Kunne ikke åpne fila: ${e.message}`,
+        error: true,
+      });
+    }
+    button.disabled = false;
   }
 
   function copyText(text) {
