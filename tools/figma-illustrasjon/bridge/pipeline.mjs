@@ -546,7 +546,7 @@ function runTrace(job, args, log) {
 function traceError(stderr, code) {
   const apple = stderr.match(/execution error: (.*?)(?:\\n|'|\n|$)/);
   if (/-1712/.test(stderr))
-    return 'Illustrator brukte mer enn 15 minutter, og trace-scriptet ga opp. Lukk store dokumenter i Illustrator og prøv igjen; det som ble ferdig, ligger i mappa.';
+    return 'Illustrator brukte mer enn 30 minutter, og trace-scriptet ga opp. Lukk store dokumenter i Illustrator og prøv igjen; det som ble ferdig, ligger i mappa.';
   return `Trace feilet (kode ${code}): ${
     apple ? apple[1] : stderr.trim().slice(-600)
   }`;

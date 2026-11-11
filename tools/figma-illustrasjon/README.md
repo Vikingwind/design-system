@@ -114,10 +114,10 @@ Panelet viser kostnaden før en fal.ai-jobb og den faktiske summen etterpå, reg
 
 - **Bare dyr og personer, bare kvadrat.** Objekter, scener og landskap kommer senere. Objekter tegnes etter skillen best med rute A (scriptet), ikke med en bildemodell.
 - **Figma tegner ikke for pluginen.** En plugin har ikke tilgang til Figmas bildegenerering, så i Figma-modus lager du utkastet selv med **Make an image**.
-- **Noe etterarbeid gjenstår.** Tracen legger tilbake øyne og neser på dyr, men skillens øvrige finish-steg gjøres i `.ai`-fila: hodestørrelse, glatt hår, 2–5 foldemerker og enklere tilbehør på personer, og bakkelinjen på dyr. MCP-verktøyene i `scripts/illustrator-mcp.mjs` hjelper.
+- **Noe etterarbeid gjenstår.** På dyr legger tracen tilbake øyne og neser og lager én enkel bakkelinje. Skillens øvrige finish-steg gjøres i `.ai`-fila: hodestørrelse, glatt hår, 2–5 foldemerker og enklere tilbehør på personer, og hvite felt mellom beina på dyr. MCP-verktøyene i `scripts/illustrator-mcp.mjs` hjelper.
 - **Breddeprofilene finnes bare i `.ai`-fila.** En linje med breddeprofil kan ikke være et SVG-strøk, så SVG-en, og dermed Figma, får dyrelinjene som fylte konturer, slik bibliotekets egne eksporter.
 - **Mørk modus kjenner ikke `cloth` og `vehicle`.** Tracen gjør all hvit om til `paper`. Klær og kjøretøy farges om for hånd i mørk modus.
-- **Tracen tar fra sekunder til minutter.** Et utkast på 1024 px tok 12 sekunder med noen få små dokumenter åpne i Illustrator, men 14 minutter med åtte dokumenter åpne, blant dem de store kildefilene i biblioteket. Trace-scriptet gir opp etter 15 minutter. Panelet advarer når Illustrator har mer enn to dokumenter åpne.
+- **Tracen tar fra sekunder til minutter.** Et utkast på 1024 px tok 12 sekunder med noen få små dokumenter åpne i Illustrator, men 14 minutter med åtte dokumenter åpne, blant dem de store kildefilene i biblioteket. Trace-scriptet gir opp etter 30 minutter. Panelet advarer når Illustrator har mer enn to dokumenter åpne.
 - **Vurderingen er en hjelp, ikke sjekken.** Sammenlign resultatet med biblioteksmotivet i alle tre modusene før det tas i bruk, og send nye motiver til `#talk-designsystem`.
 - **Én jobb om gangen.** **Avbryt** stopper broen, men et trace-script som alt kjører i Illustrator, går ferdig.
 - **Bare som utviklingsplugin.** `devAllowedDomains` gjelder bare for utviklingsplugins. Skal pluginen publiseres i organisasjonen, må broen nås på en annen måte. `id` i `manifest.json` er en plassholder.
