@@ -121,7 +121,7 @@ Hver jobb får en mappe i `outputDir` med utkastet (`utkast-1.png`), `jobb.json`
 - **Mørk modus kjenner ikke `cloth` og `vehicle`.** Tracen gjør all hvit om til `paper`, og pluginen kobler den til `Fill/Skin` på personer. Klær og kjøretøy kobles om for hånd til `Fill/Cloth` og transportvariablene.
 - **Tracen tar fra sekunder til minutter.** Et utkast på 1024 px tok 12 sekunder med noen få små dokumenter åpne i Illustrator, men 14 minutter med åtte dokumenter åpne, blant dem de store kildefilene i biblioteket. Trace-scriptet gir opp etter 30 minutter. Panelet advarer når Illustrator har mer enn to dokumenter åpne.
 - **Sjekk resultatet selv.** Sammenlign det med biblioteksmotivet i alle tre modusene før det tas i bruk, og send nye motiver til `#talk-designsystem`.
-- **Start broen på nytt etter en oppdatering.** Broen leser koden sin bare når den starter, mens panelet lastes på nytt hver gang du åpner pluginen. Kjører en eldre bro, viser panelet **Start broen på nytt** og sperrer **Spor utkastet**. Broen og panelet har hvert sitt versjonsnummer (`VERSION` i `bridge/server.mjs`, `BRIDGE_VERSION` i `ui.html`), som økes sammen når de endrer hva de sender hverandre.
+- **Broen starter seg selv på nytt etter en oppdatering.** `server.mjs` starter selve broen (`serve.mjs`) og starter den igjen når broens kode endres på disk, for eksempel etter oppdateringskommandoen. En jobb som kjører, går ferdig først. Kjører det likevel en eldre bro, viser panelet **Start broen på nytt**, og knappen ber broen starte seg selv på nytt. En bro fra før versjon 5 kan ikke det, og må startes på nytt i Terminal én gang. Broen og panelet har hvert sitt versjonsnummer (`VERSION` i `bridge/serve.mjs`, `BRIDGE_VERSION` i `ui.html`), som økes sammen når de endrer hva de sender hverandre.
 - **Én jobb om gangen.** **Avbryt** stopper broen, men et trace-script som alt kjører i Illustrator, går ferdig.
 - **Bare som utviklingsplugin.** `devAllowedDomains` gjelder bare for utviklingsplugins. Skal pluginen publiseres i organisasjonen, må broen nås på en annen måte. `id` i `manifest.json` er en plassholder.
 - **Parkoden** hindrer at andre nettsider i nettleseren din kan starte jobber på broen. Stopp broen når du ikke bruker den.
@@ -129,13 +129,14 @@ Hver jobb får en mappe i `outputDir` med utkastet (`utkast-1.png`), `jobb.json`
 
 ## Filer
 
-| Fil                   | Innhold                                                                  |
-| --------------------- | ------------------------------------------------------------------------ |
-| `manifest.json`       | Plugin-manifestet; `devAllowedDomains` og `reasoning` forklarer broen    |
-| `ui.html`             | Panelet: skjema, prompt til Figma, kontakt med broen, fremdrift          |
-| `code.js`             | Leser markert bilde, setter inn rammene og kobler fargene til variablene |
-| `bridge/server.mjs`   | HTTP-serveren, jobbene og åpning av `.ai`-fila                           |
-| `bridge/pipeline.mjs` | Stilreferanser, kontroll av utkastet og trace                            |
-| `bridge/prompt.mjs`   | Leser promptmalen og sjekklisten fra skillen                             |
-| `bridge/review.mjs`   | Vurderingen over Anthropic API, bare med egen nøkkel                     |
-| `bridge/config.mjs`   | Config-fila i `~/.config/entur-illustrasjon/`                            |
+| Fil                   | Innhold                                                                     |
+| --------------------- | --------------------------------------------------------------------------- |
+| `manifest.json`       | Plugin-manifestet; `devAllowedDomains` og `reasoning` forklarer broen       |
+| `ui.html`             | Panelet: skjema, prompt til Figma, kontakt med broen, fremdrift             |
+| `code.js`             | Leser markert bilde, setter inn rammene og kobler fargene til variablene    |
+| `bridge/server.mjs`   | Starter broen og starter den på nytt etter en oppdatering eller fra panelet |
+| `bridge/serve.mjs`    | HTTP-serveren, jobbene, sjekken mot utkastet og åpning av `.ai`-fila        |
+| `bridge/pipeline.mjs` | Stilreferanser, kontroll av utkastet og trace                               |
+| `bridge/prompt.mjs`   | Leser promptmalen og sjekklisten fra skillen                                |
+| `bridge/review.mjs`   | Vurderingen over Anthropic API, bare med egen nøkkel                        |
+| `bridge/config.mjs`   | Config-fila i `~/.config/entur-illustrasjon/`                               |
