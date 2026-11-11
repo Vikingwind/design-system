@@ -433,6 +433,11 @@
     </div>
   </form>
   <ul class="warnings" id="warnings"></ul>
+  <div class="actions" id="restart-row" hidden>
+    <button type="button" class="primary" id="restart-bridge">
+      Start broen på nytt
+    </button>
+  </div>
 </section>
 
 <form id="form">
@@ -597,7 +602,7 @@
 
 <script>
   const BRIDGE = 'http://localhost:7317';
-  const BRIDGE_VERSION = 4;
+  const BRIDGE_VERSION = 5;
   const STEPS = [
     ['references', 'Stilreferanser'],
     ['draft', 'Utkast'],
@@ -688,6 +693,7 @@
 
   function renderBridge() {
     const s = state.status;
+    $('restart-row').hidden = !outdated();
     const pill = $('bridge-state');
     $('bridge-help').hidden = Boolean(s);
     $('pair').hidden = !s || s.paired || Boolean(s.configError);
@@ -713,7 +719,7 @@
     if (outdated())
       warnings.push([
         'bad',
-        'Broen kjører en eldre versjon enn pluginen, fra før du oppdaterte. Stopp den med Ctrl+C i Terminal, start den på nytt og åpne pluginen igjen.',
+        'Broen kjører en eldre versjon enn pluginen, fra før du oppdaterte. Trykk Start broen på nytt.',
       ]);
     if (s && s.paired) {
       if (s.platform !== 'darwin')
@@ -976,6 +982,41 @@
         if (status.paired) loadReferences();
       })
       .catch(() => {});
+  });
+
+  // The bridge starts itself again (server.mjs) and comes back with the new
+  // version. A bridge from before version 5 cannot, and must be started
+  // again in Terminal once.
+  $('restart-bridge').addEventListener('click', async () => {
+    const button = $('restart-bridge');
+    button.disabled = true;
+    button.textContent = 'Starter på nytt …';
+    try {
+      await api('/api/restart', { method: 'POST' });
+      for (let i = 0; i < 20; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+          const status = await (await api('/api/status')).json();
+          if (status.version === BRIDGE_VERSION) {
+            state.status = status;
+            break;
+          }
+        } catch (e) {}
+      }
+    } catch (e) {
+      post('notify', {
+        message:
+          e.message === 'Ukjent adresse'
+            ? 'Denne broen er for gammel til å starte seg selv. Trykk Ctrl+C i Terminal-vinduet til broen og start den igjen. Etter det starter den seg selv på nytt.'
+            : `Kunne ikke starte broen på nytt: ${e.message}`,
+        error: true,
+      });
+    }
+    button.disabled = false;
+    button.textContent = 'Start broen på nytt';
+    renderBridge();
+    if (state.status && state.status.paired && !state.references.length)
+      await loadReferences();
   });
 
   // Picture
