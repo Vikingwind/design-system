@@ -27,10 +27,8 @@ Broen har ingen avhengigheter og lytter bare på `127.0.0.1`. Den kjører én jo
 - Skillen `entur-illustration`. Den ligger i `skills/entur-illustration` når [entur/design-system#546](https://github.com/entur/design-system/pull/546) er merget. Før det setter du `skillDir` til skillen i en checkout av grenen `entur-illustration-skill`. Broen leser promptmalen, sjekklisten og trace-scriptet derfra, så endringer i skillen gjelder med en gang. At øyne og neser blir med på dyr, krever skillen fra og med commit `b43329774`.
 - For dyr: en carriers-fil, en `.ai` med strøkene `swell` og `point` (skillens `references/handoff.md`). Uten den får dyrelinjene jevn bredde.
 - For utkast i Figma: Figma AI, som bruker AI-kredittene i planen fila ligger i.
-- For utkast hos fal.ai: en fal.ai-konto med kreditt og API-nøkkel.
-- For vurdering: en Anthropic API-nøkkel med kreditt.
 
-Weave, som skillen bruker fra Claude Code, er ikke med: Weave sitt API finnes bare på Weave Enterprise.
+**Godkjente verktøy i Entur:** bare Figma, Claude og Illustrator. Bruk derfor utkast fra Figma. To valg i pluginen går utenom og står av som standard: utkast hos fal.ai, og vurdering over Anthropic API med en egen nøkkel og egen faktura. Panelet viser dem bare når `falKey` eller `anthropicApiKey` står i config-fila. Vurderingen kan du heller få fra Claude i Code-fanen. Weave er heller ikke med: det er en egen tjeneste med egen konto og egne kreditter, og API-et finnes bare på Weave Enterprise.
 
 ## Oppsett
 
@@ -84,14 +82,14 @@ Velg **Dyr** eller **Person** og skriv én setning om motivet: hvem, hva de gjø
 1. Under **1. Prompt til Figma** fyller pluginen ut skillens prompt. Trykk **Kopier**.
 2. Tegn et kvadrat (for eksempel 1024 × 1024) og la det være markert, åpne **Actions → Make an image**, og lim inn prompten. Legg gjerne ved to til tre biblioteks-PNG-er som referanser med **+** i promptfeltet; det holder stilen nærmere biblioteket. Filene ligger i `apps/documentation/src/downloads/illustrations/<Kategori>/<Motiv>/PNG/`; for dyr, bruk `-background`-versjonen.
 3. Marker bildet Figma laget, og trykk **Bruk «…»**.
-4. Vil du, trykk **Vurder utkastet med Claude**. Du får avvikene og en rettelse du kan lime inn i **Edit with prompt** på bildet. Marker det nye bildet og vurder eller spor det.
+4. Står det en Anthropic-nøkkel i config-fila, kan du trykke **Vurder utkastet med Claude**. Du får avvikene og en rettelse du kan lime inn i **Edit with prompt** på bildet. Marker det nye bildet og vurder eller spor det.
 5. Trykk **Spor utkastet**.
 
 Bildet som spores, skal være strekutkastet, ikke et foto. Broen avviser bilder som ikke er kvadratiske, og bilder som ser ut som foto, før noe går til Illustrator. Et foto eller en stockillustrasjon kan ikke spores; beskriv motivet med ord i stedet.
 
 ### Utkast fra fal.ai
 
-Broen lager utkastet selv, med stilreferansene og skillens prompt. Legg eventuelt ved eget foto eller et fritt lisensiert bilde for positur, ved å slippe en fil i panelet, velge en fil eller bruke et markert bilde. En illustrasjon fra andre beskriver du heller med ord. Med **Automatisk vurdering med Claude** ser Claude hvert utkast og retter avvik i opptil to redigeringsrunder før tracen. Et ferdig utkast fra andre steder kan du spore direkte med **Bildet er et ferdig utkast**.
+Ikke godkjent i Entur. Valget vises bare når `falKey` står i config-fila. Broen lager utkastet selv, med stilreferansene og skillens prompt. Legg eventuelt ved eget foto eller et fritt lisensiert bilde for positur, ved å slippe en fil i panelet, velge en fil eller bruke et markert bilde. En illustrasjon fra andre beskriver du heller med ord. Med **Automatisk vurdering med Claude** ser Claude hvert utkast og retter avvik i opptil to redigeringsrunder før tracen. Et ferdig utkast fra andre steder kan du spore direkte med **Bildet er et ferdig utkast**.
 
 ### Resultatet
 

@@ -740,11 +740,6 @@
           'warn',
           'Ingen carriers-fil: dyrelinjene får ikke breddeprofil.',
         ]);
-      if (!s.anthropicKey)
-        warnings.push([
-          'warn',
-          'Ingen Anthropic-nøkkel: automatisk vurdering er av.',
-        ]);
     }
     $('warnings').replaceChildren(
       ...warnings.map(([level, text]) => {
@@ -767,7 +762,9 @@
       title: '2. Utkastet fra Figma',
       note: '',
       image:
-        'Marker bildet Figma laget fra prompten: et kvadratisk strekutkast på hvit bakgrunn, ikke et foto. Trykk Bruk «…». Vurder det gjerne før du sporer: Claude lister avvikene og skriver en rettelse du kan lime inn i Figmas bilderedigering.',
+        'Marker bildet Figma laget fra prompten: et kvadratisk strekutkast på hvit bakgrunn, ikke et foto. Trykk Bruk «…».',
+      review:
+        ' Vurder det gjerne før du sporer: Claude lister avvikene og skriver en rettelse du kan lime inn i Figmas bilderedigering.',
     },
     fal: {
       help: 'Broen lager utkastet hos fal.ai, med biblioteksbildene under som stilreferanser. Det koster per bilde.',
@@ -778,20 +775,29 @@
     },
   };
 
+  // fal.ai and the review over the Anthropic API are outside the tools
+  // Entur has approved (Figma, Claude, Illustrator). They show only when a
+  // key for them is in the config file.
   function renderSource() {
+    const s = state.status;
+    const falOn = Boolean(s && s.falKey);
+    const reviewOn = Boolean(s && s.anthropicKey);
+    if (!falOn && state.source === 'fal') state.source = 'figma';
     const figma = state.source === 'figma';
     const text = SOURCE_TEXT[state.source];
+    $('source').hidden = !falOn;
+    $('source-label').textContent = falOn ? 'Utkast fra' : 'Utkast fra Figma';
     for (const b of document.querySelectorAll('#source button'))
       b.setAttribute('aria-pressed', String(b.dataset.source === state.source));
     $('source-help').textContent = text.help;
     $('image-title').textContent = text.title;
     $('image-note').textContent = text.note;
-    $('image-help').textContent = text.image;
+    $('image-help').textContent =
+      text.image + (reviewOn && text.review ? text.review : '');
     $('figma-prompt').hidden = !figma;
     $('trace-only-row').hidden = figma || !state.photo;
-    $('figma-review').hidden = !figma || !state.photo;
-    const s = state.status;
-    $('review-draft').disabled = !(s && s.anthropicKey) || state.reviewing;
+    $('figma-review').hidden = !figma || !state.photo || !reviewOn;
+    $('review-draft').disabled = !reviewOn || state.reviewing;
     renderCost();
     renderStart();
   }
