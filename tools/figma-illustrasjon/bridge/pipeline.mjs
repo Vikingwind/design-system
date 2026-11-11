@@ -6,6 +6,7 @@ import { execFile, execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import zlib from 'node:zlib';
 
 import { generationPrompt, reviewBrief } from './prompt.mjs';
 import { reviewDraft } from './review.mjs';
@@ -130,6 +131,62 @@ function sipsToPng(input, output, maxSize) {
   const args = ['-s', 'format', 'png'];
   if (maxSize) args.push('-Z', String(maxSize));
   execFileSync('sips', [...args, input, '--out', output], { stdio: 'ignore' });
+}
+
+// A draft with a transparent background traces as one dark square: Image
+// Trace reads clear pixels as black. Composite it on white first. sips
+// decodes to a 32-bit BMP, so no PNG decoder is needed; the result is
+// written as an 8-bit RGB PNG.
+function flattenOnWhite(file, dir) {
+  const png = fs.readFileSync(file);
+  if (png[25] !== 4 && png[25] !== 6) return false;
+  const bmpFile = path.join(dir, 'utkast-rgba.bmp');
+  execFileSync('sips', ['-s', 'format', 'bmp', file, '--out', bmpFile], {
+    stdio: 'ignore',
+  });
+  const b = fs.readFileSync(bmpFile);
+  fs.rmSync(bmpFile);
+  const off = b.readUInt32LE(10);
+  const w = b.readInt32LE(18);
+  const hr = b.readInt32LE(22);
+  const bytes = b.readUInt16LE(28) / 8;
+  const h = Math.abs(hr);
+  const stride = Math.ceil((w * bytes) / 4) * 4;
+  const raw = Buffer.alloc((w * 3 + 1) * h);
+  for (let y = 0; y < h; y++) {
+    const row = hr > 0 ? h - 1 - y : y;
+    for (let x = 0; x < w; x++) {
+      const p = off + row * stride + x * bytes;
+      const a = bytes === 4 ? b[p + 3] / 255 : 1;
+      const q = y * (w * 3 + 1) + 1 + x * 3;
+      raw[q] = Math.round(b[p + 2] * a + 255 * (1 - a));
+      raw[q + 1] = Math.round(b[p + 1] * a + 255 * (1 - a));
+      raw[q + 2] = Math.round(b[p] * a + 255 * (1 - a));
+    }
+  }
+  const chunk = (type, data) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const td = Buffer.concat([Buffer.from(type), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(zlib.crc32(td) >>> 0);
+    return Buffer.concat([len, td, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0);
+  ihdr.writeUInt32BE(h, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  fs.writeFileSync(
+    file,
+    Buffer.concat([
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+      chunk('IHDR', ihdr),
+      chunk('IDAT', zlib.deflateSync(raw)),
+      chunk('IEND', Buffer.alloc(0)),
+    ]),
+  );
+  return true;
 }
 
 // A Linje draft is mostly white or transparent paper and a pale disc; a photo
@@ -281,6 +338,8 @@ export async function runJob(job, config) {
   fs.writeFileSync(original, Buffer.from(input.image.data, 'base64'));
   const png = path.join(dir, 'bilde.png');
   sipsToPng(original, png);
+  if (flattenOnWhite(png, dir))
+    log('Utkastet hadde gjennomsiktig bakgrunn: lagt på hvitt før tracen');
   checkDraft(png, dir);
   const draft = fs.readFileSync(png);
   saveDraft(job, dir, draft, 'Utkast fra Figma');
@@ -290,6 +349,10 @@ export async function runJob(job, config) {
   check();
   check();
   await trace(job, config, ctx, { dir, name, draft });
+
+  // 4. Check the trace against the draft: nothing lost, nothing added.
+  check();
+  job.check = await checkTrace(job, config, ctx, { dir, name });
 
   const read = suffix =>
     cleanSvg(fs.readFileSync(path.join(dir, `${name}${suffix}.svg`), 'latin1'));
@@ -326,6 +389,44 @@ export async function runJob(job, config) {
       2,
     )}\n`,
   );
+}
+
+// The skill's trace-check.mjs compares the traced SVG with the draft and
+// lists what went missing or was added, with a picture of where. An older
+// skill without the script only skips the step.
+async function checkTrace(job, config, { step, log }, { dir, name }) {
+  const script = path.join(config.skillDir, 'scripts', 'trace-check.mjs');
+  if (!fs.existsSync(script)) {
+    step('check', 'skipped');
+    log('Sjekk mot utkastet: skillen har ikke trace-check.mjs ennå');
+    return null;
+  }
+  step('check', 'running');
+  const draftFile = path.join(dir, 'utkast-endelig.png');
+  const svg = path.join(dir, `${name}.svg`);
+  try {
+    const out = await new Promise((resolve, reject) =>
+      execFile(
+        process.execPath,
+        [script, draftFile, svg, '--out', dir, '--json'],
+        { timeout: 120000, maxBuffer: 8 * 1024 * 1024 },
+        (error, stdout, stderr) =>
+          error
+            ? reject(new Error(stderr.trim() || error.message))
+            : resolve(stdout),
+      ),
+    );
+    const report = JSON.parse(out.trim().split('\n').pop());
+    const n = report.findings.length;
+    step('check', 'done', n ? `${n} avvik` : 'ingen avvik');
+    log(`Sjekk mot utkastet: ${n ? `${n} avvik` : 'ingen avvik'}`);
+    return report;
+  } catch (error) {
+    // The check helps; it never stops a finished trace.
+    step('check', 'failed', error.message.slice(0, 200));
+    log(`Sjekk mot utkastet feilet: ${error.message.slice(0, 300)}`);
+    return null;
+  }
 }
 
 async function trace(job, config, { step, log }, { dir, name, draft }) {

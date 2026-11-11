@@ -359,6 +359,11 @@
     background: var(--bg-secondary);
   }
 
+  .findings {
+    margin: 4px 0;
+    padding-left: 16px;
+  }
+
   .path {
     display: flex;
     gap: 6px;
@@ -592,11 +597,12 @@
 
 <script>
   const BRIDGE = 'http://localhost:7317';
-  const BRIDGE_VERSION = 3;
+  const BRIDGE_VERSION = 4;
   const STEPS = [
     ['references', 'Stilreferanser'],
     ['draft', 'Utkast'],
     ['trace', 'Trace i Illustrator'],
+    ['check', 'Sjekk mot utkastet'],
     ['insert', 'Satt inn i Figma'],
   ];
 
@@ -1174,13 +1180,74 @@
     );
   }
 
-  function insert() {
+  async function insert() {
     const job = state.job;
     const last = job.drafts[job.drafts.length - 1];
+    // The check picture goes next to the frames when the check found something.
+    let check = null;
+    if (job.check && !job.check.ok)
+      try {
+        check = new Uint8Array(
+          await (await api(`/api/jobs/${job.id}/check`)).arrayBuffer(),
+        );
+      } catch (e) {}
     post('insert', {
       result: job.result,
       draft: $('with-draft').checked && last ? state.images[last.n] : null,
+      check,
     });
+  }
+
+  const FINDING = {
+    ink: {
+      dot: 'en prikk (øye eller nese?)',
+      mass: 'en mørk flate',
+      line: 'en strek',
+    },
+    peach: 'en fersken-flate',
+    coral: 'en coral-flate',
+    lavender: 'en lavendel-flate',
+    tint: 'en grå flate',
+  };
+
+  function findingText(f) {
+    if (f.what.startsWith('paper'))
+      return 'Hvitt fyll utenfor figuren, synlig i darkmode';
+    const thing =
+      f.what === 'ink' ? FINDING.ink[f.shape] || 'blekk' : FINDING[f.what];
+    return f.kind === 'missing'
+      ? `Mangler ${thing}`
+      : `${thing[0].toUpperCase()}${thing.slice(1)} som ikke er i utkastet`;
+  }
+
+  // What the check against the draft found, numbered as in the picture.
+  function checkLines(check) {
+    const head = document.createElement('div');
+    if (!check) return [];
+    if (check.ok) {
+      head.textContent =
+        'Sjekk mot utkastet: ingenting mangler, og ingenting er lagt til.';
+      return [head];
+    }
+    head.textContent = `Sjekk mot utkastet: ${check.findings.length} avvik. Numrene står i sjekkbildet ved siden av rammene.`;
+    // Findings of the same sort share a line: «Mangler en fersken-flate: 2, 3, 4».
+    const groups = new Map();
+    for (const f of check.findings) {
+      const text = findingText(f);
+      groups.set(text, [...(groups.get(text) || []), f.n]);
+    }
+    const list = document.createElement('ul');
+    list.className = 'findings';
+    for (const [text, numbers] of groups) {
+      const li = document.createElement('li');
+      li.textContent = `${text}: ${numbers.join(', ')}`;
+      list.append(li);
+    }
+    const note = document.createElement('p');
+    note.className = 'meta';
+    note.textContent =
+      'Rett det som mangler i Illustrator-fila. Korte streker kan være fjernet med vilje, fordi skillen forenkler dyrene.';
+    return [head, list, note];
   }
 
   function finish() {
@@ -1201,6 +1268,7 @@
     openButton.addEventListener('click', () => openInIllustrator(openButton));
     open.append(openButton);
     lines.push(open);
+    lines.push(...checkLines(job.check));
     if (state.binding) {
       const binding = document.createElement('div');
       binding.textContent = state.binding;

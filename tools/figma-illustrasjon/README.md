@@ -79,11 +79,13 @@ Velg **Dyr** eller **Person** og skriv én setning om motivet: hvem, hva de gjø
 5. For dyr: la **Bakgrunnssirkel** stå på hvis utkastet har en sirkel bak dyret. Da bytter tracen den med bibliotekets sirkel. Har utkastet ingen sirkel, som to måker i lufta, slår du den av.
 6. Trykk **Spor utkastet**. Feiler sporingen, sier panelet hvorfor, og **Prøv igjen** starter samme jobb på nytt. **Ny illustrasjon** tar deg tilbake til skjemaet med det du har fylt ut, så du kan endre noe først.
 
-Bildet som spores, skal være strekutkastet, ikke et foto. Broen avviser bilder som ikke er kvadratiske, og bilder som ser ut som foto, før noe går til Illustrator. Et foto eller en stockillustrasjon kan ikke spores; beskriv motivet med ord i stedet.
+Bildet som spores, skal være strekutkastet, ikke et foto. Har det gjennomsiktig bakgrunn, legger broen det på hvitt først; ellers blir tracen en mørk firkant. Broen avviser bilder som ikke er kvadratiske, og bilder som ser ut som foto, før noe går til Illustrator. Et foto eller en stockillustrasjon kan ikke spores; beskriv motivet med ord i stedet.
 
 ### Resultatet
 
 Pluginen setter inn en seksjon med de tre fargemodusene på sine flater (hvit, Ebony 100 og Lavender 90), utkastet ved siden av og ett biblioteksmotiv i de samme tre modusene under, til sammenligning. Rammene har flaten som fyll så du ser modusene riktig; fjern fyllet hvis du eksporterer rammen.
+
+**Sjekk mot utkastet:** etter tracen kjører broen skillens `trace-check.mjs`. Den legger sporingen over utkastet og finner det som mangler (et øye, en mørk vingetupp, en strek, en fargeflate) og det som er lagt til (en prikk, en sirkel, hvitt fyll utenfor figuren, som bare synes i darkmode). Panelet lister avvikene, og når det er noen, legges sjekkbildet `<Navn>-sjekk` ved siden av rammene, med hvert avvik nummerert: rødt mangler, blått er lagt til. Korte streker kan være fjernet med vilje, fordi skillen forenkler dyrene. Har skillen ikke skriptet ennå, hopper broen over steget.
 
 **Åpne i Illustrator:** knappen i resultatet åpner jobbens `.ai`-fil i Illustrator, så du kan se sporingen og gjøre etterarbeidet. Broen åpner bare fila jobben laget. Den åpnes ikke av seg selv: hvert dokument som står åpent i Illustrator, gjør neste trace tregere, så lukk fila når du er ferdig.
 

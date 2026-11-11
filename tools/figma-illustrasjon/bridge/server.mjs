@@ -23,7 +23,7 @@ import {
 // The panel compares this with its own BRIDGE_VERSION (ui.html) and asks
 // for a restart when an older bridge is still running. Bump both together
 // when the panel and the bridge change what they send each other.
-const VERSION = 3;
+const VERSION = 4;
 const MAX_BODY = 40 * 1024 * 1024;
 const jobs = new Map();
 let active = null;
@@ -99,6 +99,10 @@ function publicJob(job) {
     drafts: job.drafts.map(({ n, label }) => ({ n, label })),
     error: job.error,
     result: job.state === 'done' ? job.result : null,
+    check:
+      job.state === 'done' && job.check
+        ? { ok: job.check.ok, findings: job.check.findings }
+        : null,
   };
 }
 
@@ -248,6 +252,13 @@ async function handle(req, res) {
       ),
     );
     return send(res, 200, { opened: file });
+  }
+
+  if (job && parts[3] === 'check' && req.method === 'GET') {
+    const picture = job.check?.picture;
+    if (!picture || !fs.existsSync(picture))
+      return send(res, 404, { error: 'Ingen sjekk for jobben' });
+    return send(res, 200, fs.readFileSync(picture), 'image/png');
   }
 
   if (job && parts[3] === 'drafts' && req.method === 'GET') {

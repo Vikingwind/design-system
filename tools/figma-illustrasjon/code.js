@@ -241,7 +241,21 @@ function place(section, nodes, y) {
   return { width: x - GAP + PAD, height };
 }
 
-async function insert(result, draft) {
+function imageRect(name, bytes, size) {
+  const rect = figma.createRectangle();
+  rect.name = name;
+  rect.resize(size.width, size.height);
+  rect.fills = [
+    {
+      type: 'IMAGE',
+      imageHash: figma.createImage(bytes).hash,
+      scaleMode: 'FIT',
+    },
+  ];
+  return rect;
+}
+
+async function insert(result, draft, check) {
   const section = figma.createSection();
   section.name = result.name;
 
@@ -251,19 +265,9 @@ async function insert(result, draft) {
     frame.setPluginData('folder', result.dir);
   }
   const binding = await bindAll(row, result.kind);
-  if (draft) {
-    const rect = figma.createRectangle();
-    rect.name = `${result.name}-utkast`;
-    rect.resize(row[0].width, row[0].height);
-    rect.fills = [
-      {
-        type: 'IMAGE',
-        imageHash: figma.createImage(draft).hash,
-        scaleMode: 'FIT',
-      },
-    ];
-    row.push(rect);
-  }
+  if (draft) row.push(imageRect(`${result.name}-utkast`, draft, row[0]));
+  // What the check against the draft found, boxed and numbered as in the panel.
+  if (check) row.push(imageRect(`${result.name}-sjekk`, check, row[0]));
   const first = place(section, row, PAD);
   let width = first.width;
   let height = PAD + first.height + PAD;
@@ -316,7 +320,11 @@ figma.ui.onmessage = async msg => {
         bytes,
       });
     } else if (msg.type === 'insert') {
-      const { section, binding } = await insert(msg.result, msg.draft);
+      const { section, binding } = await insert(
+        msg.result,
+        msg.draft,
+        msg.check,
+      );
       figma.notify(
         `${section.name} er satt inn i tre fargemoduser. ${bindingText(
           binding,
