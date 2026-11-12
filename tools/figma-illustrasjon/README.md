@@ -4,7 +4,7 @@ Figma-plugin som gjør et utkast fra Figmas bildegenerering om til en Entur Linj
 
 1. **Utkast:** pluginen fyller ut skillens promptmal, og du lager en PNG i Linje-stil med **Make an image** i Figma.
 2. **Vurdering, valgfritt:** Claude ser utkastet mot biblioteket og sjekklisten i skillen og skriver rettelsene.
-3. **Trace:** skillens `illustrator-trace.mjs` gjør utkastet om til levende strøk med runde ender i Illustrator, med breddeprofil, bibliotekets bakgrunnssirkel og papirunderlag på dyr.
+3. **Trace:** skillens `illustrator-trace.mjs` gjør utkastet om til levende strøk med runde ender i Illustrator, med breddeprofil, bibliotekets bakgrunnssirkel og papirunderlag på dyr og objekter.
 4. **I Figma:** én ramme per fargemodus, standard, `-darkmode` og `-contrast`, koblet til bibliotekets fargevariabler, med `.ai`-fila i jobbmappa.
 
 ## Hvorfor en lokal bro
@@ -23,7 +23,7 @@ Broen har ingen avhengigheter og lytter bare på `127.0.0.1`. Den kjører én jo
 
 - macOS med Node 24 (repoets versjon) og Adobe Illustrator 2026. Illustrator bør være startet før du sporer.
 - Skillen `entur-illustration`. Den ligger i `skills/entur-illustration` når [entur/design-system#546](https://github.com/entur/design-system/pull/546) er merget. Før det setter du `skillDir` til skillen i en checkout av grenen `entur-illustration-skill`. Broen leser promptmalen, sjekklisten og trace-scriptet derfra, så endringer i skillen gjelder med en gang.
-- For dyr: en carriers-fil, en `.ai` med strøkene `swell` og `point` (skillens `references/handoff.md`). Uten den får dyrelinjene jevn bredde.
+- For dyr og objekter: en carriers-fil, en `.ai` med strøkene `swell` og `point` (skillens `references/handoff.md`). Uten den får linjene jevn bredde.
 - Figma AI, som bruker AI-kredittene i planen fila ligger i.
 - Biblioteket **Tokens-Illustration colors** slått på i Figma-fila, for fargevariablene.
 
@@ -70,13 +70,13 @@ Broen har ingen avhengigheter og lytter bare på `127.0.0.1`. Den kjører én jo
 
 ## Bruk
 
-Velg **Dyr** eller **Person** og skriv én setning om motivet: hvem, hva de gjør og høyst én ting. Formatet er kvadrat, 320 × 320. **Navn** blir navnet på filene og rammene (`Bear`, `Bear-darkmode`, `Bear-contrast`); står det tomt, lages det fra beskrivelsen. **Fersken-element** er den ene tingen som får Peach 40. Velg så to til fire stilreferanser. Standardvalget er det skillen anbefaler: Dog, Rabbit, Squirrel og Sheep for dyr; Woman holding package, Man checking the time, Man and woman hugging og Woman walking with luggage for personer. Velg gjerne dyr med en kropp som ligner motivet.
+Velg **Dyr**, **Person** eller **Objekt** og skriv én setning om motivet: hvem, hva de gjør og høyst én ting; for et objekt hvilken ting, og hva som skjer med den. Formatet er kvadrat, 320 × 320. **Navn** blir navnet på filene og rammene (`Bear`, `Bear-darkmode`, `Bear-contrast`); står det tomt, lages det fra beskrivelsen. **Fersken-element** er den ene tingen som får Peach 40. På objekter i biblioteket er det en liten detalj, aldri hele tingen: bevegelsesstreker rundt bjella og papirflyet, listen og ringene på kalenderen, stubben på billetten, timemerkene på klokka eller brikken på kortet. Står feltet tomt, foreslår prompten slike detaljer. Velg så to til fire stilreferanser. Standardvalget er det skillen anbefaler: Dog, Rabbit, Squirrel og Sheep for dyr; Woman holding package, Man checking the time, Man and woman hugging og Woman walking with luggage for personer; Ticket, Calendar, Clock og Notification for objekter. Velg gjerne dyr med en kropp som ligner motivet.
 
 1. Under **1. Prompt til Figma** fyller pluginen ut skillens prompt. Trykk **Kopier**.
-2. Tegn et kvadrat (for eksempel 1024 × 1024) og la det være markert, åpne **Actions → Make an image**, og lim inn prompten. Legg gjerne ved to til tre biblioteks-PNG-er som referanser med **+** i promptfeltet; det holder stilen nærmere biblioteket. Filene ligger i `apps/documentation/src/downloads/illustrations/<Kategori>/<Motiv>/PNG/`; for dyr, bruk `-background`-versjonen.
+2. Tegn et kvadrat (for eksempel 1024 × 1024) og la det være markert, åpne **Actions → Make an image**, og lim inn prompten. Legg gjerne ved to til tre biblioteks-PNG-er som referanser med **+** i promptfeltet; det holder stilen nærmere biblioteket. Filene ligger i `apps/documentation/src/downloads/illustrations/<Kategori>/<Motiv>/PNG/`; for dyr og objekter, bruk versjonen med sirkel (`-background`, `in circle` eller `_Circle`).
 3. Marker bildet Figma laget, og trykk **Bruk «…»**.
 4. Står det en Anthropic-nøkkel i config-fila, kan du trykke **Vurder utkastet med Claude**. Du får avvikene og en rettelse du kan lime inn i **Edit with prompt** på bildet. Marker det nye bildet og vurder eller spor det.
-5. For dyr: la **Bakgrunnssirkel** stå på hvis utkastet har en sirkel bak dyret. Da bytter tracen den med bibliotekets sirkel. Har utkastet ingen sirkel, som to måker i lufta, slår du den av.
+5. For dyr og objekter: la **Bakgrunnssirkel** stå på hvis utkastet har en sirkel bak motivet. Da bytter tracen den med bibliotekets sirkel. Har utkastet ingen sirkel, som to måker i lufta, slår du den av.
 6. Trykk **Spor utkastet**. Feiler sporingen, sier panelet hvorfor, og **Prøv igjen** starter samme jobb på nytt. **Ny illustrasjon** tar deg tilbake til skjemaet med det du har fylt ut, så du kan endre noe først.
 
 Bildet som spores, skal være strekutkastet, ikke et foto. Har det gjennomsiktig bakgrunn, legger broen det på hvitt først; ellers blir tracen en mørk firkant. Broen avviser bilder som ikke er kvadratiske, og bilder som ser ut som foto, før noe går til Illustrator. Et foto eller en stockillustrasjon kan ikke spores; beskriv motivet med ord i stedet.
@@ -91,7 +91,7 @@ Pluginen setter inn en seksjon med de tre fargemodusene på sine flater (hvit, E
 
 **Fargevariabler:** Pluginen kobler hver farge i de tre rammene til variablene i biblioteket **Tokens-Illustration colors** (samlingen Illustration colors), slik komponentene i Illustration Library er bygd. Biblioteket må være slått på i fila.
 
-| Farge i tracen    | Dyr               | Personer                                |
+| Farge i tracen    | Dyr og objekter   | Personer                                |
 | ----------------- | ----------------- | --------------------------------------- |
 | Strek             | `Line/Body`       | `Line/Default` (fylt: `Fill/Default`)   |
 | Papir (hvitt)     | `Fill/Body`       | `Fill/Skin`                             |
@@ -100,7 +100,7 @@ Pluginen setter inn en seksjon med de tre fargemodusene på sine flater (hvit, E
 | Peach             | `Fill/Highlight`  | `Fill/Highlight 1`                      |
 | Lavendel / coral  | –                 | `Fill/Highlight 2` / `Fill/Highlight 3` |
 
-Standard- og darkmode-rammen bruker `Animal/Standard/…` eller `People/Standard/…`, og kontrastrammen `…/Contrast/…`. Darkmode-rammen står i modusen **Dark**, de to andre i **Light**, så du kan bytte modus på rammen som på en bibliotekskomponent. Farger uten variabel blir stående og står i panelet etter innsettingen. På personer får alt papir `Fill/Skin`; klær som skal bli Ebony 30 i mørk modus, bytter du selv til `Fill/Cloth`.
+Objektene i biblioteket er koblet til de samme `Animal`-variablene som dyrene. Standard- og darkmode-rammen bruker `Animal/Standard/…` eller `People/Standard/…`, og kontrastrammen `…/Contrast/…`. Darkmode-rammen står i modusen **Dark**, de to andre i **Light**, så du kan bytte modus på rammen som på en bibliotekskomponent. Farger uten variabel blir stående og står i panelet etter innsettingen. På personer får alt papir `Fill/Skin`; klær som skal bli Ebony 30 i mørk modus, bytter du selv til `Fill/Cloth`.
 
 Hver jobb får en mappe i `outputDir` med utkastet (`utkast-1.png`), `jobb.json` og resultatet: `<Navn>.ai` med levende strøk og `<Navn>.svg`, `<Navn>-darkmode.svg` og `<Navn>-contrast.svg`. Rammene i Figma er kopier: endrer du `.ai`-fila senere, må du lime eller importere den inn i Figma på nytt, og en ny trace gir en ny seksjon.
 
@@ -114,7 +114,7 @@ Hver jobb får en mappe i `outputDir` med utkastet (`utkast-1.png`), `jobb.json`
 
 ## Begrensninger
 
-- **Bare dyr og personer, bare kvadrat.** Objekter, scener og landskap kommer senere. Objekter tegnes etter skillen best med rute A (scriptet), ikke med en bildemodell.
+- **Bare dyr, personer og objekter, bare kvadrat.** Scener og landskap kommer senere. Objekter spores som dyr (svulmende linjer, sirkel, papirunderlag), men uten øyne og neser: mørke prikker på et objekt blir vanlig strek.
 - **Figma tegner ikke for pluginen.** En plugin har ikke tilgang til Figmas bildegenerering, så du lager utkastet selv med **Make an image**.
 - **Noe etterarbeid gjenstår.** På dyr legger tracen tilbake øyne og neser og lager én enkel bakkelinje. Skillens øvrige finish-steg gjøres i `.ai`-fila: hodestørrelse, glatt hår, 2–5 foldemerker og enklere tilbehør på personer, og hvite felt mellom beina på dyr. MCP-verktøyene i `scripts/illustrator-mcp.mjs` hjelper.
 - **Breddeprofilene finnes bare i `.ai`-fila.** En linje med breddeprofil kan ikke være et SVG-strøk, så SVG-en, og dermed Figma, får dyrelinjene som fylte konturer, slik bibliotekets egne eksporter.

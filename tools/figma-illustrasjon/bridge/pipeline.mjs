@@ -11,7 +11,15 @@ import zlib from 'node:zlib';
 import { generationPrompt, reviewBrief } from './prompt.mjs';
 import { reviewDraft } from './review.mjs';
 
-const CATEGORIES = { animal: ['Animals'], person: ['People', 'Entur staff'] };
+const CATEGORIES = {
+  animal: ['Animals'],
+  person: ['People', 'Entur staff'],
+  object: ['Objects'],
+};
+// Animals and objects share one construction: swelling lines, the backdrop
+// disc and paper under each figure (the library binds both to the Animal
+// colour variables).
+const ANIMAL_BUILT = new Set(['animal', 'object']);
 // SKILL.md Step 4b: the references to start from for each kind.
 const DEFAULT_REFERENCES = {
   animal: ['Dog', 'Rabbit', 'Squirrel', 'Sheep'],
@@ -21,6 +29,7 @@ const DEFAULT_REFERENCES = {
     'Man and woman hugging',
     'Woman walking with luggage',
   ],
+  object: ['Ticket', 'Calendar', 'Clock', 'Notification'],
 };
 
 // File names in the library vary (Sheep-darkmode, Kitty_Dark, Hamster_default,
@@ -34,7 +43,9 @@ function pick(files, { background, mode }) {
         : n.includes('dark')
         ? 'darkmode'
         : 'standard';
-      return m === mode && n.includes('background') === background;
+      // Objects name the disc version «in circle», «_Circle» or «-circle».
+      const disc = n.includes('background') || n.includes('circle');
+      return m === mode && disc === background;
     })
     .sort((a, b) => a.length - b.length)[0];
 }
@@ -58,7 +69,7 @@ export function listReferences(libraryDir, kind) {
         category,
         thumb: `${category}/${motif}/PNG/${plain}`,
         png: `${category}/${motif}/PNG/${
-          kind === 'animal' && withDisc ? withDisc : plain
+          ANIMAL_BUILT.has(kind) && withDisc ? withDisc : plain
         }`,
         isDefault: DEFAULT_REFERENCES[kind].includes(motif),
       });
@@ -372,7 +383,7 @@ export async function runJob(job, config) {
           svgs: librarySvgs(
             config.libraryDir,
             references[0].id,
-            input.kind === 'animal',
+            ANIMAL_BUILT.has(input.kind),
           ),
         }
       : null,
@@ -434,7 +445,7 @@ async function trace(job, config, { step, log }, { dir, name, draft }) {
   step('trace', 'running', 'Illustrator');
   let draftFile = path.join(dir, 'utkast-endelig.png');
   fs.writeFileSync(draftFile, draft);
-  let underlay = input.kind === 'animal';
+  let underlay = ANIMAL_BUILT.has(input.kind);
   if (!traceablePng(draft)) {
     const converted = path.join(dir, 'utkast-endelig-rgb.png');
     sipsToPng(draftFile, converted);
@@ -455,10 +466,12 @@ async function trace(job, config, { step, log }, { dir, name, draft }) {
     '--app',
     config.illustratorApp,
   ];
-  if (input.kind === 'animal') {
+  if (ANIMAL_BUILT.has(input.kind)) {
     args.push('--construction', 'animals');
-    // Off for a draft with no disc behind the animal, as some library
-    // animals are drawn.
+    // An object has no eyes or nose: its dark dots stay plain ink.
+    if (input.kind === 'object') args.push('--no-features');
+    // Off for a draft with no disc behind the motif, as some library
+    // animals and objects are drawn.
     if (input.backdrop !== false) args.push('--backdrop');
     if (underlay) args.push('--underlay');
     if (config.carriersFile && fs.existsSync(config.carriersFile))

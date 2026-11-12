@@ -79,6 +79,8 @@ const ROLES = {
     coral: 'Fill/Highlight 3',
   },
 };
+// Library objects bind to the Animal variables too.
+ROLES.object = ROLES.animal;
 const GAP = 40;
 const PAD = 40;
 

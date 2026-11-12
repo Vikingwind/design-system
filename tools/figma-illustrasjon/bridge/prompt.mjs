@@ -6,6 +6,20 @@ import path from 'node:path';
 
 const NO_CORAL = '__NO_CORAL__';
 
+// What a [For …:] slot's label names, per kind.
+const KIND_WORDS = {
+  animal: /\banimals?\b/i,
+  person: /\b(people|persons?)\b/i,
+  object: /\bobjects?\b/i,
+};
+
+// Peach on a library object is a small detail of it, never the object itself
+// (Objects in the library and the square .ai): motion or sparkle strokes
+// around a bell, a paper plane or a ticket; the band and rings on top of a
+// calendar; the stub stripes of a ticket; a clock's hour marks; a card's chip.
+const OBJECT_PEACH =
+  'one small detail of the object, never the whole object: a few short motion or sparkle strokes around it, a band or tab on it (the top of a calendar, the stub of a ticket), small marks (the hour marks of a clock) or a chip on a card';
+
 function read(skillDir, file) {
   return fs.readFileSync(path.join(skillDir, file), 'utf8');
 }
@@ -43,6 +57,7 @@ export function generationPrompt(
   const md = read(skillDir, 'references/raster-first.md');
   const template = codeBlock(section(md, 'Prompt template'));
   const animal = kind === 'animal';
+  const object = kind === 'object';
   const sentence = scene.trim().replace(/[.\s]+$/, '');
 
   const out = [];
@@ -56,6 +71,8 @@ export function generationPrompt(
           peach?.trim() ||
           (animal
             ? 'one small prop the animal holds, wears or has beside it (a collar, a ball, a ticket, a leaf), or one marking of its own (a chest patch, horns)'
+            : object
+            ? OBJECT_PEACH
             : 'one small prop in the scene, or no Peach at all if there is no prop')
         );
       // Coral: the library has none on animals, people or objects, only on
@@ -71,9 +88,12 @@ export function generationPrompt(
         if (!animal) drop = true;
         return animal ? slot : '';
       }
-      if (slot.startsWith('Optional for objects and animals:')) {
-        if (!animal) return '';
-        const rest = slot.slice(slot.indexOf(':') + 1).trim();
+      // [For objects: …], [Optional for objects and animals: …]: the text
+      // without its label, for the kinds the label names; nothing for others.
+      const scoped = slot.match(/^(?:Optional for|For) ([^:]+):\s*([\s\S]+)$/);
+      if (scoped) {
+        if (!KIND_WORDS[kind]?.test(scoped[1])) return '';
+        const rest = scoped[2].trim();
         return rest[0].toUpperCase() + rest.slice(1);
       }
       throw new Error(`Ukjent felt i promptmalen: [${slot}]`);
@@ -81,12 +101,22 @@ export function generationPrompt(
     const plain = filled.replace(
       /[^.]*__NO_CORAL__[^.]*\.?/,
       ` No coral or red (#FF5959) anywhere, not on ${
-        animal ? 'a comb, a wattle or a tongue' : 'lips, cheeks or clothes'
+        animal
+          ? 'a comb, a wattle or a tongue'
+          : object
+          ? 'the object or any detail of it'
+          : 'lips, cheeks or clothes'
       } either.`,
     );
-    if (!drop) out.push(plain.replace(/\s+$/, '').replace(/\.\.$/, '.'));
+    const text = plain.replace(/\s+$/, '').replace(/\.\.$/, '.');
+    // A bullet whose only slot was for another kind goes with it.
+    if (!drop && text !== '-') out.push(text);
   }
-  if (!references) return withoutReferences(out, md, animal).join('\n').trim();
+  // Objects swell like animals (SKILL.md rule 1), so they get the same line.
+  if (!references)
+    return withoutReferences(out, md, animal || object)
+      .join('\n')
+      .trim();
   if (hasPhoto)
     out.push(
       '',
@@ -95,7 +125,7 @@ export function generationPrompt(
   return out.join('\n');
 }
 
-function withoutReferences(lines, md, animal) {
+function withoutReferences(lines, md, swelling) {
   // raster-first.md, «Fallback: Figma generate_image»: the line, spelled out.
   const cue = section(md, 'Fallback').match(/\("([^"]+)"\)/);
   return lines
@@ -103,7 +133,7 @@ function withoutReferences(lines, md, animal) {
     .map(line =>
       line.includes('attached reference images')
         ? `Line illustration in the style of the Entur Linje illustration library: hand-drawn${
-            animal && cue ? `, ${cue[1]}` : ''
+            swelling && cue ? `, ${cue[1]}` : ''
           }.`
         : line,
     );

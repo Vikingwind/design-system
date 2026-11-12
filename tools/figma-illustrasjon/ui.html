@@ -456,7 +456,7 @@
         <button type="button" data-kind="person" aria-pressed="false">
           Person
         </button>
-        <button type="button" disabled title="Objekter kommer senere">
+        <button type="button" data-kind="object" aria-pressed="false">
           Objekt
         </button>
       </div>
@@ -474,7 +474,9 @@
         rows="3"
         placeholder="En fjellrev som sitter ved et busstoppskilt og ser opp"
       ></textarea>
-      <p class="meta">Én setning: hvem, hva de gjør, og høyst én ting.</p>
+      <p class="meta" id="description-hint">
+        Én setning: hvem, hva de gjør, og høyst én ting.
+      </p>
     </div>
     <div class="field two">
       <div>
@@ -559,7 +561,7 @@
       >
       <p class="meta">
         Bytter sirkelen i utkastet med bibliotekets sirkel. Slå av hvis utkastet
-        ikke har en sirkel bak dyret.
+        ikke har en sirkel bak motivet.
       </p>
     </div>
     <label class="check"
@@ -602,7 +604,7 @@
 
 <script>
   const BRIDGE = 'http://localhost:7317';
-  const BRIDGE_VERSION = 5;
+  const BRIDGE_VERSION = 6;
   const STEPS = [
     ['references', 'Stilreferanser'],
     ['draft', 'Utkast'],
@@ -610,6 +612,34 @@
     ['check', 'Sjekk mot utkastet'],
     ['insert', 'Satt inn i Figma'],
   ];
+
+  // Examples per motif, from the library: animals carry a prop or a marking
+  // in Peach; objects a small detail (motion strokes, a calendar's band, a
+  // ticket's stub). Animals and objects are built alike: swelling lines and
+  // the backdrop disc.
+  const KINDS = {
+    animal: {
+      description: 'En fjellrev som sitter ved et busstoppskilt og ser opp',
+      hint: 'Én setning: hvem, hva de gjør, og høyst én ting.',
+      name: 'Fox-bus-stop',
+      peach: 'halsbånd, ball, brystflekk',
+      swelling: true,
+    },
+    person: {
+      description: 'En kvinne som venter på bussen med en pakke i armene',
+      hint: 'Én setning: hvem, hva de gjør, og høyst én ting.',
+      name: 'Woman-waiting-package',
+      peach: 'skiltet, skjerfet, pakken',
+      swelling: false,
+    },
+    object: {
+      description: 'Ei bjelle som ringer, litt på skrå',
+      hint: 'Én setning: hvilken ting, og hva som skjer med den. Uten folk og dyr.',
+      name: 'Bell-ringing',
+      peach: 'bevegelsesstreker, kalenderlist, billettstubb',
+      swelling: true,
+    },
+  };
 
   const $ = id => document.getElementById(id);
   const state = {
@@ -741,10 +771,10 @@
           'warn',
           `Illustrator har ${s.illustratorDocuments} dokumenter åpne. Tracen går mye tregere med store filer åpne, og gir opp etter 30 minutter.`,
         ]);
-      if (state.kind === 'animal' && !s.carriers)
+      if (KINDS[state.kind].swelling && !s.carriers)
         warnings.push([
           'warn',
-          'Ingen carriers-fil: dyrelinjene får ikke breddeprofil.',
+          'Ingen carriers-fil: linjene får ikke breddeprofil.',
         ]);
     }
     $('warnings').replaceChildren(
@@ -947,9 +977,12 @@
       state.kind = button.dataset.kind;
       for (const b of document.querySelectorAll('#kind button[data-kind]'))
         b.setAttribute('aria-pressed', String(b === button));
-      $('peach').placeholder =
-        state.kind === 'animal' ? 'halsbånd, ball, brystflekk' : 'skiltet';
-      $('backdrop-row').hidden = state.kind !== 'animal';
+      const examples = KINDS[state.kind];
+      $('description').placeholder = examples.description;
+      $('description-hint').textContent = examples.hint;
+      $('name').placeholder = examples.name;
+      $('peach').placeholder = examples.peach;
+      $('backdrop-row').hidden = !examples.swelling;
       state.references = [];
       $('refs').replaceChildren();
       renderBridge();
@@ -1084,7 +1117,7 @@
       peach: $('peach').value.trim(),
       image: state.photo,
       references: selectedRefs(),
-      backdrop: state.kind === 'animal' && $('backdrop').checked,
+      backdrop: KINDS[state.kind].swelling && $('backdrop').checked,
       compare: $('compare').checked,
     });
   });

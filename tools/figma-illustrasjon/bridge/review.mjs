@@ -94,7 +94,8 @@ export async function reviewDraft({
   content.push({
     type: 'text',
     text: `Subject: ${
-      kind === 'animal' ? 'an animal' : 'a person'
+      { animal: 'an animal', person: 'a person', object: 'an object' }[kind] ||
+      'a person'
     }. Scene asked for: ${scene}\nReview the draft against the references and the rules.${
       draftOnly
         ? '\nThe edit runs on the draft alone, in an image tool that takes one image and a prompt: describe each fix in words, without pointing to another image, and set fix_reference to 0.'
