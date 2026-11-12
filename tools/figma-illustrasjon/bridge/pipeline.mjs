@@ -420,6 +420,7 @@ async function checkTrace(job, config, { step, log }, { dir, name }) {
   // Strips an object's trace turns to paper on purpose are not missing tint.
   const args = [script, draftFile, svg, '--out', dir, '--json'];
   if (job.input.kind === 'object') args.push('--object');
+  if (job.input.kind === 'transport') args.push('--vehicle');
   try {
     const out = await new Promise((resolve, reject) =>
       execFile(

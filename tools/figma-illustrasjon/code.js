@@ -215,7 +215,13 @@ async function bindColours(frame, kind, mode) {
     node.fills.some(
       p => p.type === 'SOLID' && byHex[hexOf(p.color)] === 'ink',
     );
-  const named = nodes.filter(node => /^Window/.test(node.name));
+  // The trace names a window or a glint, or the group it sits in.
+  const under = (node, re) => {
+    for (let n = node; n && n !== frame; n = n.parent)
+      if (re.test(n.name)) return true;
+    return false;
+  };
+  const named = nodes.filter(node => under(node, /^Window/));
   const windows = !roles.smallInk
     ? []
     : named.length
@@ -257,7 +263,7 @@ async function bindColours(frame, kind, mode) {
             roles.glint &&
             fill &&
             colour === 'paper' &&
-            (/^Glint/.test(node.name) || onWindow(node))
+            (under(node, /^Glint/) || onWindow(node))
           )
             role = roles.glint;
           else if (
