@@ -108,7 +108,11 @@ export function generationPrompt(
           : 'lips, cheeks or clothes'
       } either.`,
     );
-    const text = plain.replace(/\s+$/, '').replace(/\.\.$/, '.');
+    // An empty slot leaves two spaces between its neighbours.
+    const text = plain
+      .replace(/(\S) {2,}/g, '$1 ')
+      .replace(/\s+$/, '')
+      .replace(/\.\.$/, '.');
     // A bullet whose only slot was for another kind goes with it.
     if (!drop && text !== '-') out.push(text);
   }
