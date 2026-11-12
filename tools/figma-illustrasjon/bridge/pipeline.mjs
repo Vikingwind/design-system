@@ -17,9 +17,13 @@ const CATEGORIES = {
   person: ['People', 'Entur staff'],
   // The library's hand gestures (Clapping, Thumbs up) are square status
   // motifs built like the objects, with Peach sparkle strokes.
-  object: ['Objects', 'Hands'],
+  object: ['Objects', 'Hands', 'Concepts'],
   transport: ['Transport'],
 };
+// Where a kind takes only some motifs of a category: of the concepts, the
+// two Figma keeps among the objects (Data, Digital shared system), which are
+// square motifs built like them.
+const ONLY = { object: { Concepts: ['Data', 'Digital Shared system'] } };
 // Animals and objects share one construction: swelling lines, the backdrop
 // disc and paper under each figure (the library binds both to the Animal
 // colour variables).
@@ -89,6 +93,8 @@ export function listReferences(libraryDir, kind) {
     for (const category of CATEGORIES[kind] || []) {
       for (const motif of listDir(path.join(root, category)).sort()) {
         if (seen.has(`${category}/${motif}`)) continue;
+        const only = ONLY[kind]?.[category];
+        if (only && !only.includes(motif)) continue;
         const pngDir = path.join(root, category, motif, 'PNG');
         const pngs = listDir(pngDir).filter(f => f.endsWith('.png'));
         const plain = pick(pngs, { background: false, mode: 'standard' });
