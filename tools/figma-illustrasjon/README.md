@@ -114,7 +114,7 @@ Hver jobb får en mappe i `outputDir` med utkastet (`utkast-1.png`), `jobb.json`
 
 ## Begrensninger
 
-- **Bare dyr, personer og objekter, bare kvadrat.** Scener og landskap kommer senere. Objekter spores som dyr (svulmende linjer, sirkel, papirunderlag), men uten øyne og neser: mørke prikker på et objekt blir vanlig strek.
+- **Bare dyr, personer og objekter, bare kvadrat.** Scener og landskap kommer senere. Objekter spores som dyr (svulmende linjer, sirkel, papirunderlag), men med skillens `--object`: mørke prikker blir vanlig strek, ikke øyne, og sirkelen som synes gjennom hakk og tomme ringer, får ikke skyggefarge. Sjekken kjøres også med `--object`.
 - **Figma tegner ikke for pluginen.** En plugin har ikke tilgang til Figmas bildegenerering, så du lager utkastet selv med **Make an image**.
 - **Noe etterarbeid gjenstår.** På dyr legger tracen tilbake øyne og neser og lager én enkel bakkelinje. Skillens øvrige finish-steg gjøres i `.ai`-fila: hodestørrelse, glatt hår, 2–5 foldemerker og enklere tilbehør på personer, og hvite felt mellom beina på dyr. MCP-verktøyene i `scripts/illustrator-mcp.mjs` hjelper.
 - **Breddeprofilene finnes bare i `.ai`-fila.** En linje med breddeprofil kan ikke være et SVG-strøk, så SVG-en, og dermed Figma, får dyrelinjene som fylte konturer, slik bibliotekets egne eksporter.

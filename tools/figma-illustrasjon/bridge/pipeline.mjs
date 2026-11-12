@@ -415,11 +415,14 @@ async function checkTrace(job, config, { step, log }, { dir, name }) {
   step('check', 'running');
   const draftFile = path.join(dir, 'utkast-endelig.png');
   const svg = path.join(dir, `${name}.svg`);
+  // Strips an object's trace turns to paper on purpose are not missing tint.
+  const args = [script, draftFile, svg, '--out', dir, '--json'];
+  if (job.input.kind === 'object') args.push('--object');
   try {
     const out = await new Promise((resolve, reject) =>
       execFile(
         process.execPath,
-        [script, draftFile, svg, '--out', dir, '--json'],
+        args,
         { timeout: 120000, maxBuffer: 8 * 1024 * 1024 },
         (error, stdout, stderr) =>
           error
@@ -468,8 +471,10 @@ async function trace(job, config, { step, log }, { dir, name, draft }) {
   ];
   if (ANIMAL_BUILT.has(input.kind)) {
     args.push('--construction', 'animals');
-    // An object has no eyes or nose: its dark dots stay plain ink.
-    if (input.kind === 'object') args.push('--no-features');
+    // An object has no eyes or nose, so its dark dots stay plain ink, and
+    // the disc showing through its gaps and empty rings gets no tint.
+    // --no-features stays for a skill from before --object.
+    if (input.kind === 'object') args.push('--object', '--no-features');
     // Off for a draft with no disc behind the motif, as some library
     // animals and objects are drawn.
     if (input.backdrop !== false) args.push('--backdrop');
