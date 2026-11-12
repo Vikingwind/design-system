@@ -45,6 +45,22 @@ const VARIABLE_KEYS = {
     '9d2142dc548e4b3041701bc87af60ecca1190f2b',
   'People/Contrast/Fill/Highlight 3':
     'a604c2de4bf3ae53750f44f84ad785ee4940d136',
+  'Transports/Default/Stroke': '01fc5da28c701af0780fa90d4974c9d65b5de25e',
+  'Transports/Default/Window': '33b5becdbe0e90b59e3bf953355d649a51278131',
+  'Transports/Default/Fill': '4b500a5167f6f81534f1b38b8c5b1efc42dd2162',
+  'Transports/Default/Background': 'a3009b1f3270db33812d15a6bd117f5a0cf405ca',
+  'Transports/Default/Background Subdued':
+    '78b7301342af8b349a5e367d3b2fa553f2b10ed4',
+  'Transports/Default/Legline': 'db0458cc8c291a7de64465429873ef28b1d98036',
+  'Transports/Default/Reflex': '967f8a4b6caff0844397fb76ff3d3d7e56ec2b6d',
+  'Transports/Contrast/Stroke': '102c8553565917b167cea0ec898cf3f8c78a07f6',
+  'Transports/Contrast/Window': '0bea46884c038a0ba9d01d6247b0df8755f94fea',
+  'Transports/Contrast/Fill': 'cee9fc2911573aa1223a57175b31ebeb4cc8351d',
+  'Transports/Contrast/Background': 'b8dec01f2f2f88b3935ae74dc4c373761783c0b4',
+  'Transports/Contrast/Background Subdued':
+    '5fc65b35d78df809fa99021f12cc938b38e1be08',
+  'Transports/Contrast/Legline': '3c9570b714672121457151f6b0678d08bde5a7ac',
+  'Transports/Contrast/Reflex': 'f420c1e383fa21635e676f272a4d71eff09393a1',
 };
 // The traced colours per mode (the skill's palette.md), standard first.
 const PALETTE = {
@@ -54,6 +70,9 @@ const PALETTE = {
   lavender: ['#AEB7E2', '#AEB7E2', '#AEB7E2'],
   peach: ['#FFBF9E', '#FFBF9E', '#FFBF9E'],
   coral: ['#FF5959', '#FF9494', '#FF5959'],
+  // A vehicle traced with --vehicle: its body and its lit windows.
+  vehicle: ['#FFFFFF', '#999AA7', '#FFFFFF'],
+  window: ['#181C56', '#FFEEB3', '#626493'],
 };
 // Which variable each colour takes. On animals the lines are outlined
 // shapes (a width profile cannot be a Figma stroke); on people they are
@@ -78,7 +97,26 @@ const ROLES = {
     peach: 'Fill/Highlight 1',
     coral: 'Fill/Highlight 3',
   },
+  // The library's vehicles have a group of their own, with Default in place
+  // of Standard. Windows light up (Canary) in dark mode and other ink fills,
+  // like a scooter's wheels, do not; glints on a window are Reflex, which
+  // shows in dark mode only. The trace's --vehicle names the windows and
+  // glints; without the names, a large ink fill counts as a window.
+  transport: {
+    group: 'Transports',
+    sets: ['Default', 'Contrast'],
+    ink: ['Stroke', 'Window'],
+    window: 'Window',
+    smallInk: 'Fill',
+    glint: 'Reflex',
+    paper: 'Background',
+    vehicle: 'Background',
+    tint: 'Background Subdued',
+    coral: 'Legline',
+  },
 };
+// An ink fill this large a share of the frame is a window, not a wheel.
+const WINDOW_SHARE = 0.006;
 // Library objects bind to the Animal variables too.
 ROLES.object = ROLES.animal;
 const GAP = 40;
@@ -156,7 +194,9 @@ async function variable(name) {
 async function bindColours(frame, kind, mode) {
   const roles = ROLES[kind] || ROLES.animal;
   const index = MODES.indexOf(mode);
-  const set = mode === 'contrast' ? 'Contrast' : 'Standard';
+  const set = (roles.sets || ['Standard', 'Contrast'])[
+    mode === 'contrast' ? 1 : 0
+  ];
   const byHex = {};
   for (const [colour, values] of Object.entries(PALETTE))
     if (roles[colour] && !byHex[values[index]]) byHex[values[index]] = colour;
@@ -169,6 +209,39 @@ async function bindColours(frame, kind, mode) {
   let bound = 0;
   const left = new Set();
   const nodes = frame.findAll(node => 'fills' in node);
+  // Vehicles: which ink fills are windows, and which paper lies on one.
+  const inkFill = node =>
+    Array.isArray(node.fills) &&
+    node.fills.some(
+      p => p.type === 'SOLID' && byHex[hexOf(p.color)] === 'ink',
+    );
+  const named = nodes.filter(node => /^Window/.test(node.name));
+  const windows = !roles.smallInk
+    ? []
+    : named.length
+    ? named
+    : nodes.filter(
+        node =>
+          inkFill(node) &&
+          node.width * node.height >=
+            frame.width * frame.height * WINDOW_SHARE,
+      );
+  const onWindow = node => {
+    const b = node.absoluteBoundingBox;
+    return (
+      b &&
+      windows.some(w => {
+        const a = w.absoluteBoundingBox;
+        return (
+          a &&
+          b.x >= a.x - 1 &&
+          b.y >= a.y - 1 &&
+          b.x + b.width <= a.x + a.width + 1 &&
+          b.y + b.height <= a.y + a.height + 1
+        );
+      })
+    );
+  };
   for (const node of nodes) {
     for (const prop of ['fills', 'strokes']) {
       const paints = node[prop];
@@ -178,8 +251,22 @@ async function bindColours(frame, kind, mode) {
         let role = null;
         if (paint.type === 'SOLID') {
           const colour = byHex[hexOf(paint.color)];
+          const fill = prop === 'fills';
           if (roles.circle && inCircle(node)) role = roles.circle;
-          else if (colour === 'ink') role = roles.ink[prop === 'fills' ? 1 : 0];
+          else if (
+            roles.glint &&
+            fill &&
+            colour === 'paper' &&
+            (/^Glint/.test(node.name) || onWindow(node))
+          )
+            role = roles.glint;
+          else if (
+            roles.smallInk &&
+            fill &&
+            (colour === 'ink' || colour === 'window')
+          )
+            role = windows.includes(node) ? roles.window : roles.smallInk;
+          else if (colour === 'ink') role = roles.ink[fill ? 1 : 0];
           else if (colour) role = roles[colour];
           if (!role) left.add(hexOf(paint.color));
         }

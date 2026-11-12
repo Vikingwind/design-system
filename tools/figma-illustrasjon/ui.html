@@ -459,6 +459,9 @@
         <button type="button" data-kind="object" aria-pressed="false">
           Objekt
         </button>
+        <button type="button" data-kind="transport" aria-pressed="false">
+          Transport
+        </button>
       </div>
     </div>
     <div class="field">
@@ -604,7 +607,7 @@
 
 <script>
   const BRIDGE = 'http://localhost:7317';
-  const BRIDGE_VERSION = 6;
+  const BRIDGE_VERSION = 7;
   const STEPS = [
     ['references', 'Stilreferanser'],
     ['draft', 'Utkast'],
@@ -638,6 +641,15 @@
       name: 'Bell-ringing',
       peach: 'bevegelsesstreker, kalenderlist, billettstubb',
       swelling: true,
+    },
+    // The library's vehicles: side view, ink windows, a coral line under
+    // them (solid for rails, dashed for road, a wave for water), no Peach.
+    transport: {
+      description: 'Et tog som kjører langs skinnene, sett fra siden',
+      hint: 'Én setning: hvilket kjøretøy, og hvor det kjører. Sett fra siden, uten folk.',
+      name: 'Train-rails',
+      peach: 'som regel ingen',
+      swelling: false,
     },
   };
 

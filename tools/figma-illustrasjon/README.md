@@ -70,7 +70,7 @@ Broen har ingen avhengigheter og lytter bare på `127.0.0.1`. Den kjører én jo
 
 ## Bruk
 
-Velg **Dyr**, **Person** eller **Objekt** og skriv én setning om motivet: hvem, hva de gjør og høyst én ting; for et objekt hvilken ting, og hva som skjer med den. Formatet er kvadrat, 320 × 320. **Navn** blir navnet på filene og rammene (`Bear`, `Bear-darkmode`, `Bear-contrast`); står det tomt, lages det fra beskrivelsen. **Fersken-element** er den ene tingen som får Peach 40. På objekter i biblioteket er det en liten detalj, aldri hele tingen: bevegelsesstreker rundt bjella og papirflyet, listen og ringene på kalenderen, stubben på billetten, timemerkene på klokka eller brikken på kortet. Står feltet tomt, foreslår prompten slike detaljer. Velg så to til fire stilreferanser. Standardvalget er det skillen anbefaler: Dog, Rabbit, Squirrel og Sheep for dyr; Woman holding package, Man checking the time, Man and woman hugging og Woman walking with luggage for personer; Ticket, Calendar, Clock og Notification for objekter. Velg gjerne dyr med en kropp som ligner motivet.
+Velg **Dyr**, **Person**, **Objekt** eller **Transport** og skriv én setning om motivet: hvem, hva de gjør og høyst én ting; for et objekt hvilken ting, og hva som skjer med den; for transport hvilket kjøretøy, og hvor det kjører. Formatet er kvadrat, 320 × 320. **Navn** blir navnet på filene og rammene (`Bear`, `Bear-darkmode`, `Bear-contrast`); står det tomt, lages det fra beskrivelsen. **Fersken-element** er den ene tingen som får Peach 40. På objekter i biblioteket er det en liten detalj, aldri hele tingen: bevegelsesstreker rundt bjella og papirflyet, listen og ringene på kalenderen, stubben på billetten, timemerkene på klokka eller brikken på kortet. Står feltet tomt, foreslår prompten slike detaljer. Kjøretøyene i biblioteket har ingen Peach; de har en coral linje under seg i stedet: hel for skinner, stiplet for vei og en bølge for vann. Velg så to til fire stilreferanser. Standardvalget er det skillen anbefaler: Dog, Rabbit, Squirrel og Sheep for dyr; Woman holding package, Man checking the time, Man and woman hugging og Woman walking with luggage for personer; Ticket, Calendar, Clock og Notification for objekter; Train, Bus, Tram og Boat for transport. Velg gjerne dyr med en kropp som ligner motivet.
 
 1. Under **1. Prompt til Figma** fyller pluginen ut skillens prompt. Trykk **Kopier**.
 2. Tegn et kvadrat (for eksempel 1024 × 1024) og la det være markert, åpne **Actions → Make an image**, og lim inn prompten. Legg gjerne ved to til tre biblioteks-PNG-er som referanser med **+** i promptfeltet; det holder stilen nærmere biblioteket. Filene ligger i `apps/documentation/src/downloads/illustrations/<Kategori>/<Motiv>/PNG/`; for dyr og objekter, bruk versjonen med sirkel (`-background`, `in circle` eller `_Circle`).
@@ -91,16 +91,16 @@ Pluginen setter inn en seksjon med de tre fargemodusene på sine flater (hvit, E
 
 **Fargevariabler:** Pluginen kobler hver farge i de tre rammene til variablene i biblioteket **Tokens-Illustration colors** (samlingen Illustration colors), slik komponentene i Illustration Library er bygd. Biblioteket må være slått på i fila.
 
-| Farge i tracen    | Dyr og objekter   | Personer                                |
-| ----------------- | ----------------- | --------------------------------------- |
-| Strek             | `Line/Body`       | `Line/Default` (fylt: `Fill/Default`)   |
-| Papir (hvitt)     | `Fill/Body`       | `Fill/Skin`                             |
-| Grått (`tint`)    | `Fill/BodyShadow` | –                                       |
-| Bakgrunnssirkelen | `Fill/Circle`     | –                                       |
-| Peach             | `Fill/Highlight`  | `Fill/Highlight 1`                      |
-| Lavendel / coral  | –                 | `Fill/Highlight 2` / `Fill/Highlight 3` |
+| Farge i tracen    | Dyr og objekter   | Personer                                | Transport                                        |
+| ----------------- | ----------------- | --------------------------------------- | ------------------------------------------------ |
+| Strek             | `Line/Body`       | `Line/Default` (fylt: `Fill/Default`)   | `Stroke` (fylt: `Window`, små flater: `Fill`)    |
+| Papir (hvitt)     | `Fill/Body`       | `Fill/Skin`                             | `Background` (på et vindu: `Reflex`)             |
+| Grått (`tint`)    | `Fill/BodyShadow` | –                                       | `Background Subdued`                             |
+| Bakgrunnssirkelen | `Fill/Circle`     | –                                       | –                                                |
+| Peach             | `Fill/Highlight`  | `Fill/Highlight 1`                      | –                                                |
+| Lavendel / coral  | –                 | `Fill/Highlight 2` / `Fill/Highlight 3` | – / `Legline`                                    |
 
-Objektene i biblioteket er koblet til de samme `Animal`-variablene som dyrene. Standard- og darkmode-rammen bruker `Animal/Standard/…` eller `People/Standard/…`, og kontrastrammen `…/Contrast/…`. Darkmode-rammen står i modusen **Dark**, de to andre i **Light**, så du kan bytte modus på rammen som på en bibliotekskomponent. Farger uten variabel blir stående og står i panelet etter innsettingen. På personer får alt papir `Fill/Skin`; klær som skal bli Ebony 30 i mørk modus, bytter du selv til `Fill/Cloth`.
+Objektene i biblioteket er koblet til de samme `Animal`-variablene som dyrene. Standard- og darkmode-rammen bruker `Animal/Standard/…`, `People/Standard/…` eller `Transports/Default/…`, og kontrastrammen `…/Contrast/…`. På kjøretøy sporer broen med skillens `--vehicle`: karosseriet får papir under seg, og vinduene og glimtene får navn. Et vindu blir `Window`, som lyser gult i mørk modus, og andre mørke flater, som hjulene på en sparkesykkel, blir `Fill`. Hvite glimt på et vindu blir `Reflex`, som bare synes i mørk modus, slik bibliotekets kjøretøy er bygd. Med en eldre skill uten navnene regnes en mørk flate på minst 0,6 % av rammen som et vindu. Darkmode-rammen står i modusen **Dark**, de to andre i **Light**, så du kan bytte modus på rammen som på en bibliotekskomponent. Farger uten variabel blir stående og står i panelet etter innsettingen. På personer får alt papir `Fill/Skin`; klær som skal bli Ebony 30 i mørk modus, bytter du selv til `Fill/Cloth`.
 
 Hver jobb får en mappe i `outputDir` med utkastet (`utkast-1.png`), `jobb.json` og resultatet: `<Navn>.ai` med levende strøk og `<Navn>.svg`, `<Navn>-darkmode.svg` og `<Navn>-contrast.svg`. Rammene i Figma er kopier: endrer du `.ai`-fila senere, må du lime eller importere den inn i Figma på nytt, og en ny trace gir en ny seksjon.
 
@@ -114,7 +114,7 @@ Hver jobb får en mappe i `outputDir` med utkastet (`utkast-1.png`), `jobb.json`
 
 ## Begrensninger
 
-- **Bare dyr, personer og objekter, bare kvadrat.** Scener og landskap kommer senere. Objekter spores som dyr (svulmende linjer, sirkel, papirunderlag), men med skillens `--object`: mørke prikker blir vanlig strek, ikke øyne, og sirkelen som synes gjennom hakk og tomme ringer, får ikke skyggefarge. Sjekken kjøres også med `--object`.
+- **Bare dyr, personer, objekter og transport, bare kvadrat.** Scener og landskap kommer senere. Kjøretøy spores som personer, med jevne linjer og uten sirkel. Objekter spores som dyr (svulmende linjer, sirkel, papirunderlag), men med skillens `--object`: mørke prikker blir vanlig strek, ikke øyne, og sirkelen som synes gjennom hakk og tomme ringer, får ikke skyggefarge. Sjekken kjøres også med `--object`.
 - **Figma tegner ikke for pluginen.** En plugin har ikke tilgang til Figmas bildegenerering, så du lager utkastet selv med **Make an image**.
 - **Noe etterarbeid gjenstår.** På dyr legger tracen tilbake øyne og neser og lager én enkel bakkelinje. Skillens øvrige finish-steg gjøres i `.ai`-fila: hodestørrelse, glatt hår, 2–5 foldemerker og enklere tilbehør på personer, og hvite felt mellom beina på dyr. MCP-verktøyene i `scripts/illustrator-mcp.mjs` hjelper.
 - **Breddeprofilene finnes bare i `.ai`-fila.** En linje med breddeprofil kan ikke være et SVG-strøk, så SVG-en, og dermed Figma, får dyrelinjene som fylte konturer, slik bibliotekets egne eksporter.

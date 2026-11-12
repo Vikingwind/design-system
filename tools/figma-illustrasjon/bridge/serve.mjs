@@ -25,7 +25,7 @@ import {
 // The panel compares this with its own BRIDGE_VERSION (ui.html) and asks
 // for a restart when an older bridge is still running. Bump both together
 // when the panel and the bridge change what they send each other.
-const VERSION = 6;
+const VERSION = 7;
 // server.mjs starts the bridge again when it exits with this code.
 const RESTART = 75;
 const supervised = process.env.ENTUR_BRIDGE_SUPERVISED === '1';
@@ -114,8 +114,8 @@ function publicJob(job) {
 async function startJob(input, config) {
   if (active)
     throw Object.assign(new Error('En jobb kjører allerede'), { code: 409 });
-  if (!['animal', 'person', 'object'].includes(input.kind))
-    throw Object.assign(new Error('Velg dyr, person eller objekt'), {
+  if (!['animal', 'person', 'object', 'transport'].includes(input.kind))
+    throw Object.assign(new Error('Velg dyr, person, objekt eller transport'), {
       code: 400,
     });
   if (!input.image?.data)

@@ -94,7 +94,12 @@ export async function reviewDraft({
   content.push({
     type: 'text',
     text: `Subject: ${
-      { animal: 'an animal', person: 'a person', object: 'an object' }[kind] ||
+      {
+        animal: 'an animal',
+        person: 'a person',
+        object: 'an object',
+        transport: 'a vehicle',
+      }[kind] ||
       'a person'
     }. Scene asked for: ${scene}\nReview the draft against the references and the rules.${
       draftOnly

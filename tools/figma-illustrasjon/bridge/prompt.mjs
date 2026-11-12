@@ -11,12 +11,17 @@ const KIND_WORDS = {
   animal: /\banimals?\b/i,
   person: /\b(people|persons?)\b/i,
   object: /\bobjects?\b/i,
+  transport: /\b(vehicles?|transport)\b/i,
 };
 
 // Peach on a library object is a small detail of it, never the object itself
 // (Objects in the library and the square .ai): motion or sparkle strokes
 // around a bell, a paper plane or a ticket; the band and rings on top of a
 // calendar; the stub stripes of a ticket; a clock's hour marks; a card's chip.
+// The library's five vehicles (Transport, Transportmidler-modified.ai) carry
+// no Peach: white body, ink windows, a coral line under them.
+const VEHICLE_PEACH =
+  'nothing on the vehicle itself; leave Peach out unless the scene has one small prop beside it';
 const OBJECT_PEACH =
   'one small detail of the object, never the whole object: a few short motion or sparkle strokes around it, a band or tab on it (the top of a calendar, the stub of a ticket), small marks (the hour marks of a clock) or a chip on a card';
 
@@ -58,6 +63,7 @@ export function generationPrompt(
   const template = codeBlock(section(md, 'Prompt template'));
   const animal = kind === 'animal';
   const object = kind === 'object';
+  const vehicle = kind === 'transport';
   const sentence = scene.trim().replace(/[.\s]+$/, '');
 
   const out = [];
@@ -73,13 +79,22 @@ export function generationPrompt(
             ? 'one small prop the animal holds, wears or has beside it (a collar, a ball, a ticket, a leaf), or one marking of its own (a chest patch, horns)'
             : object
             ? OBJECT_PEACH
+            : vehicle
+            ? VEHICLE_PEACH
             : 'one small prop in the scene, or no Peach at all if there is no prop')
         );
       // Coral: the library has none on animals, people or objects, only on
-      // Entur staff uniforms and transport lines. The plugin draws neither,
-      // so the coral sentence goes (below).
-      if (slot.includes(' | '))
-        return /Entur staff/.test(slot) ? NO_CORAL : slot.split(' | ')[0];
+      // Entur staff uniforms and the line under a vehicle. A vehicle takes
+      // the option for its line; the plugin draws no staff, so for the rest
+      // the coral sentence goes (below).
+      if (slot.includes(' | ')) {
+        const options = slot.split(' | ');
+        if (vehicle) {
+          const line = options.find(o => /vehicle/.test(o));
+          if (line) return line;
+        }
+        return /Entur staff/.test(slot) ? NO_CORAL : options[0];
+      }
       if (slot.startsWith('Entur staff:')) {
         drop = true;
         return '';

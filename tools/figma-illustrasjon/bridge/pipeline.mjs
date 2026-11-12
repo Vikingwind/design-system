@@ -15,6 +15,7 @@ const CATEGORIES = {
   animal: ['Animals'],
   person: ['People', 'Entur staff'],
   object: ['Objects'],
+  transport: ['Transport'],
 };
 // Animals and objects share one construction: swelling lines, the backdrop
 // disc and paper under each figure (the library binds both to the Animal
@@ -30,6 +31,7 @@ const DEFAULT_REFERENCES = {
     'Woman walking with luggage',
   ],
   object: ['Ticket', 'Calendar', 'Clock', 'Notification'],
+  transport: ['Train', 'Bus', 'Tram', 'Boat'],
 };
 
 // File names in the library vary (Sheep-darkmode, Kitty_Dark, Hamster_default,
@@ -483,6 +485,9 @@ async function trace(job, config, { step, log }, { dir, name, draft }) {
       args.push('--carriers', config.carriersFile);
     else log('Ingen carriers-fil: linjene får ikke breddeprofil');
   }
+  // A vehicle: the body gets paper under it, and the dark file gets the
+  // library's vehicle and window colours. An older skill ignores the flag.
+  if (input.kind === 'transport') args.push('--vehicle');
   await runTrace(job, args, log);
   step('trace', 'done');
 }
