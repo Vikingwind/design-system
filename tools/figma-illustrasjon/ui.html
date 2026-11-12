@@ -976,7 +976,9 @@
           .map(encodeURIComponent)
           .join('/')}`;
         const name = document.createElement('span');
-        name.textContent = ref.name;
+        name.textContent = ref.isNew ? `${ref.name} · ny` : ref.name;
+        if (ref.isNew)
+          label.title = `${ref.name}: nyere motiv fra Figma-biblioteket`;
         label.append(input, img, name);
         return label;
       }),

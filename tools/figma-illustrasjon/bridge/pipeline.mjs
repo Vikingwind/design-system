@@ -6,6 +6,7 @@ import { execFile, execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import zlib from 'node:zlib';
 
 import { generationPrompt, reviewBrief } from './prompt.mjs';
@@ -56,33 +57,64 @@ function listDir(dir) {
   return fs.existsSync(dir) ? fs.readdirSync(dir) : [];
 }
 
-export function listReferences(libraryDir, kind) {
-  const motifs = [];
-  for (const category of CATEGORIES[kind] || []) {
-    for (const motif of listDir(path.join(libraryDir, category)).sort()) {
-      const pngDir = path.join(libraryDir, category, motif, 'PNG');
-      const pngs = listDir(pngDir).filter(f => f.endsWith('.png'));
-      const plain = pick(pngs, { background: false, mode: 'standard' });
-      if (!plain) continue;
-      const withDisc = pick(pngs, { background: true, mode: 'standard' });
-      motifs.push({
-        id: `${category}/${motif}`,
-        name: category === 'Entur staff' ? `${motif} staff` : motif,
-        category,
-        thumb: `${category}/${motif}/PNG/${plain}`,
-        png: `${category}/${motif}/PNG/${
-          ANIMAL_BUILT.has(kind) && withDisc ? withDisc : plain
-        }`,
-        isDefault: DEFAULT_REFERENCES[kind].includes(motif),
-      });
-    }
-  }
-  return motifs;
+// Newer library motifs that are not in the documentation's downloads yet,
+// exported from the Figma Illustration Library into the plugin
+// (references/<Category>/<Motif>/PNG). Their ids and paths start with
+// «plugin/»; a motif the downloads already have is taken from there.
+const PLUGIN_REFERENCES = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'references',
+);
+const PLUGIN = 'plugin/';
+
+// A library path (an id, a thumb or a png) on disk, or null outside both.
+export function libraryFile(libraryDir, rel) {
+  const [root, inner] = rel.startsWith(PLUGIN)
+    ? [PLUGIN_REFERENCES, rel.slice(PLUGIN.length)]
+    : [path.resolve(libraryDir), rel];
+  const file = path.resolve(root, inner);
+  return file.startsWith(root + path.sep) ? file : null;
 }
 
-// The library's three SVG modes of a motif, for comparison in Figma.
+export function listReferences(libraryDir, kind) {
+  const motifs = [];
+  const seen = new Set();
+  for (const [root, prefix] of [
+    [libraryDir, ''],
+    [PLUGIN_REFERENCES, PLUGIN],
+  ]) {
+    for (const category of CATEGORIES[kind] || []) {
+      for (const motif of listDir(path.join(root, category)).sort()) {
+        if (seen.has(`${category}/${motif}`)) continue;
+        const pngDir = path.join(root, category, motif, 'PNG');
+        const pngs = listDir(pngDir).filter(f => f.endsWith('.png'));
+        const plain = pick(pngs, { background: false, mode: 'standard' });
+        if (!plain) continue;
+        seen.add(`${category}/${motif}`);
+        const withDisc = pick(pngs, { background: true, mode: 'standard' });
+        motifs.push({
+          id: `${prefix}${category}/${motif}`,
+          name: category === 'Entur staff' ? `${motif} staff` : motif,
+          category,
+          isNew: Boolean(prefix),
+          thumb: `${prefix}${category}/${motif}/PNG/${plain}`,
+          png: `${prefix}${category}/${motif}/PNG/${
+            ANIMAL_BUILT.has(kind) && withDisc ? withDisc : plain
+          }`,
+          isDefault: DEFAULT_REFERENCES[kind].includes(motif),
+        });
+      }
+    }
+  }
+  // The newest motifs first, so the panel shows them without scrolling.
+  return motifs.sort((a, b) => b.isNew - a.isNew);
+}
+
+// The library's three SVG modes of a motif, for comparison in Figma; null
+// when the motif has no SVGs (the plugin's own references are PNG only).
 function librarySvgs(libraryDir, id, background) {
-  const dir = path.join(libraryDir, id, 'SVG');
+  const dir = path.join(libraryFile(libraryDir, id) || '', 'SVG');
   const svgs = listDir(dir).filter(f => f.endsWith('.svg'));
   const out = {};
   for (const mode of ['standard', 'darkmode', 'contrast']) {
@@ -273,7 +305,7 @@ function loadReferences(config, kind, ids) {
     .slice(0, 4)
     .map(m => ({
       ...m,
-      bytes: fs.readFileSync(path.join(config.libraryDir, m.png)),
+      bytes: fs.readFileSync(libraryFile(config.libraryDir, m.png)),
     }));
   if (references.length < 2) throw new Error('Velg minst to stilreferanser');
   return references;
@@ -379,15 +411,18 @@ export async function runJob(job, config) {
       darkmode: read('-darkmode'),
       contrast: read('-contrast'),
     },
+    // The first chosen reference that has the three SVG modes.
     compare: input.compare
-      ? {
-          name: references[0].name,
-          svgs: librarySvgs(
-            config.libraryDir,
-            references[0].id,
-            ANIMAL_BUILT.has(input.kind),
-          ),
-        }
+      ? references
+          .map(r => ({
+            name: r.name,
+            svgs: librarySvgs(
+              config.libraryDir,
+              r.id,
+              ANIMAL_BUILT.has(input.kind),
+            ),
+          }))
+          .find(c => c.svgs) || null
       : null,
   };
   fs.writeFileSync(

@@ -17,6 +17,7 @@ import {
   figmaPrompt,
   illustratorDocuments,
   illustratorRunning,
+  libraryFile,
   listReferences,
   reviewOnce,
   runJob,
@@ -189,15 +190,13 @@ async function handle(req, res) {
       paired: paired(req, config),
     });
 
-  // Library PNGs are public on linje.entur.no; served without the code so <img> can load them.
+  // Library PNGs are public on linje.entur.no; served without the code so
+  // <img> can load them. The plugin's own references come from Figma's
+  // library the same way.
   if (parts[0] === 'api' && parts[1] === 'library' && req.method === 'GET') {
     const rel = decodeURIComponent(parts.slice(2).join('/'));
-    const file = path.resolve(config.libraryDir, rel);
-    if (
-      !file.startsWith(path.resolve(config.libraryDir) + path.sep) ||
-      !file.endsWith('.png') ||
-      !fs.existsSync(file)
-    )
+    const file = libraryFile(config.libraryDir, rel);
+    if (!file || !file.endsWith('.png') || !fs.existsSync(file))
       return send(res, 404, { error: 'Fant ikke bildet' });
     res.setHeader('Cache-Control', 'max-age=3600');
     return send(res, 200, fs.readFileSync(file), 'image/png');
