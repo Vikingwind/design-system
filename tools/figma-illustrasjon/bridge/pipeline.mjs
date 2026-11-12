@@ -15,7 +15,9 @@ import { reviewDraft } from './review.mjs';
 const CATEGORIES = {
   animal: ['Animals'],
   person: ['People', 'Entur staff'],
-  object: ['Objects'],
+  // The library's hand gestures (Clapping, Thumbs up) are square status
+  // motifs built like the objects, with Peach sparkle strokes.
+  object: ['Objects', 'Hands'],
   transport: ['Transport'],
 };
 // Animals and objects share one construction: swelling lines, the backdrop
