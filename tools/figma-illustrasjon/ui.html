@@ -1298,9 +1298,26 @@
     tint: 'en grå flate',
   };
 
+  // trace-check's paper findings, by what they mean for the designer.
+  const PAPER = {
+    'paper outside the figures': 'Hvitt fyll utenfor figuren, synlig i darkmode',
+    'paper along the outside of a line':
+      'Hvitt fyll utenfor en strek, synlig i darkmode',
+    'paper inside a figure': 'Mangler hvitt fyll inni figuren',
+    'paper in a gap inside a figure':
+      'Sprekk i det hvite fyllet, bakgrunnen synes i darkmode',
+    'paper beyond the edge of the circle':
+      'Mangler hvitt fyll utenfor sirkelkanten',
+  };
+
   function findingText(f) {
     if (f.what.startsWith('paper'))
-      return 'Hvitt fyll utenfor figuren, synlig i darkmode';
+      return (
+        PAPER[f.what] ||
+        (f.kind === 'missing'
+          ? 'Mangler hvitt fyll'
+          : 'Hvitt fyll som ikke er i utkastet')
+      );
     const thing =
       f.what === 'ink' ? FINDING.ink[f.shape] || 'blekk' : FINDING[f.what];
     return f.kind === 'missing'
