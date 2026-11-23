@@ -27,6 +27,7 @@ const ONLY = { object: { Concepts: ['Data', 'Digital Shared system'] } };
 // Animals and objects share one construction: swelling lines, the backdrop
 // disc and paper under each figure (the library binds both to the Animal
 // colour variables).
+const POINTS = /^\d+(\.\d+)?,\d+(\.\d+)?( \d+(\.\d+)?,\d+(\.\d+)?)*$/;
 const ANIMAL_BUILT = new Set(['animal', 'object']);
 // SKILL.md Step 4b: the references to start from for each kind.
 const DEFAULT_REFERENCES = {
@@ -532,6 +533,20 @@ async function trace(job, config, { step, log }, { dir, name, draft }) {
   // A vehicle: the body gets paper under it, and the dark file gets the
   // library's vehicle and window colours. An older skill ignores the flag.
   if (input.kind === 'transport') args.push('--vehicle');
+  // A person: points (in the SVG's viewBox units) on each piece of clothing,
+  // joined into one fill named Clothes, and on closed pockets of air that
+  // stay unfilled. The pixels cannot tell clothes from skin or air.
+  if (input.kind === 'person')
+    for (const [key, flag] of [
+      ['clothes', '--clothes'],
+      ['open', '--open'],
+    ]) {
+      const points = String(input[key] || '').trim().replace(/\s+/g, ' ');
+      if (!points) continue;
+      if (!POINTS.test(points))
+        throw new Error(`${key}: skriv punkter som "x,y x,y"`);
+      args.push(flag, points);
+    }
   await runTrace(job, args, log);
   step('trace', 'done');
 }
