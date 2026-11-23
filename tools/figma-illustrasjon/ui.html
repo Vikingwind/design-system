@@ -579,10 +579,17 @@
 
   <section class="block">
     <div class="actions">
-      <button type="submit" class="primary" id="start" disabled>
+      <button
+        type="submit"
+        class="primary"
+        id="start"
+        disabled
+        aria-describedby="start-hint"
+      >
         Spor utkastet
       </button>
     </div>
+    <p class="meta" id="start-hint" aria-live="polite"></p>
   </section>
 </form>
 
@@ -941,17 +948,26 @@
     $('ref-count').textContent = `${refs} valgt, 2–4`;
     for (const input of document.querySelectorAll('#refs input'))
       input.disabled = !input.checked && refs >= 4;
-    $('start').disabled = !(
-      s &&
-      !outdated() &&
-      s.paired &&
-      s.skill &&
-      state.photo &&
-      s.illustrator &&
-      !s.busy &&
-      refs >= 2 &&
-      ($('description').value.trim() || $('name').value.trim())
-    );
+    // What still stands between the designer and a trace, in the order
+    // they would fix it; the button is on only when the list is empty.
+    const missing = [];
+    if (!s) missing.push('kontakt med broen (start den i Terminal)');
+    else if (outdated()) missing.push('broen må startes på nytt (knappen øverst)');
+    else if (!s.paired) missing.push('parkoden fra broen');
+    else {
+      if (!s.skill) missing.push('skillen, som broen ikke finner');
+      if (!s.illustrator) missing.push('Illustrator, som ikke kjører');
+      if (s.busy) missing.push('at broen blir ferdig med jobben den holder på med');
+    }
+    if (!$('description').value.trim() && !$('name').value.trim())
+      missing.push('en beskrivelse eller et navn');
+    if (!state.photo)
+      missing.push('utkastet: marker bildet i Figma og trykk Bruk «…»');
+    if (refs < 2) missing.push('minst to stilreferanser');
+    $('start').disabled = missing.length > 0;
+    $('start-hint').textContent = missing.length
+      ? `Før du kan spore: ${missing.join(', ')}.`
+      : '';
   }
 
   async function loadReferences() {
@@ -1486,5 +1502,6 @@
     }
   };
 
+  renderStart();
   post('ready');
 </script>

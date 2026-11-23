@@ -79,7 +79,7 @@ Velg **Dyr**, **Person**, **Objekt** eller **Transport** og skriv én setning om
 3. Marker bildet Figma laget, og trykk **Bruk «…»**.
 4. Står det en Anthropic-nøkkel i config-fila, kan du trykke **Vurder utkastet med Claude**. Du får avvikene og en rettelse du kan lime inn i **Edit with prompt** på bildet. Marker det nye bildet og vurder eller spor det.
 5. For dyr og objekter: la **Bakgrunnssirkel** stå på hvis utkastet har en sirkel bak motivet. Da bytter tracen den med bibliotekets sirkel. Har utkastet ingen sirkel, som to måker i lufta, slår du den av.
-6. Trykk **Spor utkastet**. Feiler sporingen, sier panelet hvorfor, og **Prøv igjen** starter samme jobb på nytt. **Ny illustrasjon** tar deg tilbake til skjemaet med det du har fylt ut, så du kan endre noe først.
+6. Trykk **Spor utkastet**. Er knappen grå, står det under den hva som mangler: kontakt eller parkode til broen, Illustrator, en beskrivelse eller et navn (navnet er valgfritt når beskrivelsen er fylt ut), utkastet (marker bildet og trykk **Bruk «…»**) eller to stilreferanser. Feiler sporingen, sier panelet hvorfor, og **Prøv igjen** starter samme jobb på nytt. **Ny illustrasjon** tar deg tilbake til skjemaet med det du har fylt ut, så du kan endre noe først.
 
 Bildet som spores, skal være strekutkastet, ikke et foto. Har det gjennomsiktig bakgrunn, legger broen det på hvitt først; ellers blir tracen en mørk firkant. Broen avviser bilder som ikke er kvadratiske, og bilder som ser ut som foto, før noe går til Illustrator. Et foto eller en stockillustrasjon kan ikke spores; beskriv motivet med ord i stedet.
 
