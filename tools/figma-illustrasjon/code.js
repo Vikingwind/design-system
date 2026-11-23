@@ -30,6 +30,7 @@ const VARIABLE_KEYS = {
   'People/Standard/Line/Default': '191e2d6aa67d3210f825d79a58e3a9ad0b98df54',
   'People/Standard/Fill/Default': '3d6e2615479d714ec058eae3ba2e4ab87835f68f',
   'People/Standard/Fill/Skin': '98b0fc4b0699fad3bf56cacc5366fc2f2031d361',
+  'People/Standard/Fill/Cloth': 'c8254636f08c752694d6098c4c46f1109426b231',
   'People/Standard/Fill/Highlight 1':
     'fa2fef38c1fc97bb04dde3a9dd8cbe37d7f83f18',
   'People/Standard/Fill/Highlight 2':
@@ -39,6 +40,7 @@ const VARIABLE_KEYS = {
   'People/Contrast/Line/Default': 'd76a431b54f0acf20903a67ccbf4d01f1f18d04a',
   'People/Contrast/Fill/Default': '623a7dedbb47ce44b7f26940f359ad583cde6c03',
   'People/Contrast/Fill/Skin': '786a109a0f749d6d2b9363f1b2e0a805305c332b',
+  'People/Contrast/Fill/Cloth': '1d7bd54158917c31dc24cc7082c5dcb782d13ef2',
   'People/Contrast/Fill/Highlight 1':
     'de64f4e7666bdcb18c130786f6eb0b4c3f3cd971',
   'People/Contrast/Fill/Highlight 2':
@@ -78,8 +80,9 @@ const PALETTE = {
 // shapes (a width profile cannot be a Figma stroke); on people they are
 // strokes, and ink fills (hair, a uniform) are Fill/Default. Everything in
 // the Circle layer is the backdrop disc. In dark mode the library gives
-// paper on clothes Ebony 30 (Fill/Cloth); a trace cannot tell skin from
-// cloth, so all paper on people starts as Fill/Skin.
+// paper on clothes Ebony 30 (Fill/Cloth). The trace names the clothing
+// fill "Clothes"; paper under it is Fill/Cloth, all other paper on people
+// (face, hands) is Fill/Skin.
 const ROLES = {
   animal: {
     group: 'Animal',
@@ -93,6 +96,7 @@ const ROLES = {
     group: 'People',
     ink: ['Line/Default', 'Fill/Default'],
     paper: 'Fill/Skin',
+    cloth: 'Fill/Cloth',
     lavender: 'Fill/Highlight 2',
     peach: 'Fill/Highlight 1',
     coral: 'Fill/Highlight 3',
@@ -273,6 +277,13 @@ async function bindColours(frame, kind, mode) {
           )
             role = windows.includes(node) ? roles.window : roles.smallInk;
           else if (colour === 'ink') role = roles.ink[fill ? 1 : 0];
+          else if (
+            roles.cloth &&
+            fill &&
+            colour === 'paper' &&
+            under(node, /^Cloth/)
+          )
+            role = roles.cloth;
           else if (colour) role = roles[colour];
           if (!role) left.add(hexOf(paint.color));
         }
