@@ -546,9 +546,8 @@ async function trace(job, config, { step, log }, { dir, name, draft }) {
     ]) {
       if (typeof input[key] !== 'string') continue;
       const points = input[key].trim().replace(/\s+/g, ' ');
-      // An empty clothes list says: no clothes, do not guess. An empty
-      // open list adds nothing.
-      if (!points && key === 'open') continue;
+      // An empty list says: none, do not guess. Without the key the skill
+      // guesses (clothes, and air under a desk).
       if (points && !POINTS.test(points))
         throw new Error(`${key}: skriv punkter som "x,y x,y"`);
       args.push(flag, points);
