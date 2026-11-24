@@ -108,6 +108,9 @@ export function listReferences(libraryDir, kind) {
           category,
           isNew: Boolean(prefix),
           thumb: `${prefix}${category}/${motif}/PNG/${plain}`,
+          // Changes when the picture is replaced, so the panel does not show
+          // a cached old one.
+          version: Math.round(fs.statSync(path.join(pngDir, plain)).mtimeMs),
           png: `${prefix}${category}/${motif}/PNG/${
             ANIMAL_BUILT.has(kind) && withDisc ? withDisc : plain
           }`,

@@ -1022,7 +1022,7 @@
         img.src = `${BRIDGE}/api/library/${ref.thumb
           .split('/')
           .map(encodeURIComponent)
-          .join('/')}`;
+          .join('/')}?v=${ref.version || ''}`;
         const name = document.createElement('span');
         name.textContent = ref.isNew ? `${ref.name} · ny` : ref.name;
         if (ref.isNew)
