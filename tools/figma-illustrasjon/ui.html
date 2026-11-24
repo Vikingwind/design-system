@@ -47,6 +47,38 @@
     font-weight: 600;
   }
 
+  /* Clothes and air on a traced person: click a part to change it. */
+  .parts svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin: 8px 0;
+  }
+  .parts .part {
+    cursor: pointer;
+    stroke: none;
+  }
+  .parts .part.other { fill: #fff; }
+  .parts .part.clothes { fill: #aeb7e2; }
+  .parts .part.open { fill: url(#air); }
+  .parts .part:hover { opacity: 0.7; }
+  .parts .legend {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .parts .legend i {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 4px;
+    vertical-align: -1px;
+    border: 1px solid #181c56;
+  }
   .meta,
   .warnings {
     margin: 4px 0 0;
@@ -1153,8 +1185,9 @@
   });
 
   // Starts a job; «Prøv igjen» sends the same body again.
-  async function startJob(body) {
+  async function startJob(body, replace = null) {
     state.lastBody = body;
+    state.replace = replace;
     try {
       const job = await (
         await api('/api/jobs', {
@@ -1297,6 +1330,8 @@
       } catch (e) {}
     post('insert', {
       result: job.result,
+      // «Spor på nytt» puts the new frames where the old section was.
+      replace: state.replace,
       draft: $('with-draft').checked && last ? state.images[last.n] : null,
       check,
     });
@@ -1389,6 +1424,7 @@
     openButton.addEventListener('click', () => openInIllustrator(openButton));
     open.append(openButton);
     lines.push(open);
+    if (job.result.parts) lines.push(partsEditor(job.result));
     lines.push(...checkLines(job.check));
     if (state.binding) {
       const binding = document.createElement('div');
@@ -1419,6 +1455,121 @@
       'Sjekk resultatet mot biblioteksmotivet i alle tre modusene før det brukes. Etterarbeidet i skillen (hode, hår, foldemerker) gjøres i Illustrator-fila.';
     lines.push(note);
     result.replaceChildren(...lines);
+  }
+
+  // The trace guesses which white parts of a person are clothes; the
+  // pixels cannot tell clothes from skin, or a pocket of air from a part.
+  // A click cycles a part through Klær, Annet and Luft, and «Spor på nytt»
+  // traces the same draft with those parts, in place of the frames above.
+  const PART_NEXT = { clothes: 'other', other: 'open', open: 'clothes' };
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  function partsEditor(result) {
+    const wrap = document.createElement('div');
+    wrap.className = 'parts';
+    const head = document.createElement('strong');
+    head.textContent = 'Klær og luft';
+    const help = document.createElement('p');
+    help.className = 'meta';
+    help.textContent =
+      'Lilla flater blir klær (Fill/Cloth), hvite blir hud eller gjenstand, skraverte blir luft. Ser det riktig ut, er du ferdig. Ellers klikker du en flate for å bytte, og sporer på nytt.';
+
+    const roles = result.parts.parts.map(p =>
+      p.role === 'clothes' ? 'clothes' : p.role === 'open' ? 'open' : 'other',
+    );
+    const start = roles.join();
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', result.parts.viewBox.join(' '));
+    const defs = document.createElementNS(SVG_NS, 'defs');
+    const pattern = document.createElementNS(SVG_NS, 'pattern');
+    pattern.id = 'air';
+    pattern.setAttribute('width', '4');
+    pattern.setAttribute('height', '4');
+    pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+    pattern.setAttribute('patternTransform', 'rotate(45)');
+    const bar = document.createElementNS(SVG_NS, 'rect');
+    bar.setAttribute('width', '1.5');
+    bar.setAttribute('height', '4');
+    bar.setAttribute('fill', '#ff5959');
+    pattern.append(bar);
+    defs.append(pattern);
+    svg.append(defs);
+
+    const paths = result.parts.parts.map((part, i) => {
+      const path = document.createElementNS(SVG_NS, 'path');
+      path.setAttribute('d', part.d);
+      path.setAttribute('fill-rule', 'evenodd');
+      const title = document.createElementNS(SVG_NS, 'title');
+      path.append(title);
+      path.addEventListener('click', () => {
+        roles[i] = PART_NEXT[roles[i]];
+        paint();
+      });
+      svg.append(path);
+      return path;
+    });
+
+    // The trace's own lines on top, so the parts read as the figure.
+    const doc = new DOMParser().parseFromString(
+      result.svgs.standard,
+      'image/svg+xml',
+    );
+    const outline = doc.getElementById('Outline');
+    if (outline) {
+      const lines = document.importNode(outline, true);
+      lines.setAttribute('pointer-events', 'none');
+      svg.append(lines);
+    }
+
+    const legend = document.createElement('div');
+    legend.className = 'legend';
+    for (const [colour, label] of [
+      ['#aeb7e2', 'Klær'],
+      ['#fff', 'Annet'],
+      ['#ff5959', 'Luft'],
+    ]) {
+      const item = document.createElement('span');
+      const swatch = document.createElement('i');
+      swatch.style.background = colour;
+      item.append(swatch, label);
+      legend.append(item);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const again = document.createElement('button');
+    again.type = 'button';
+    again.className = 'primary';
+    again.textContent = 'Spor på nytt';
+    again.addEventListener('click', () => {
+      const points = role =>
+        result.parts.parts
+          .filter((p, i) => roles[i] === role)
+          .map(p => p.point.map(n => Math.round(n * 10) / 10).join(','))
+          .join(' ');
+      startJob(
+        { ...state.lastBody, clothes: points('clothes'), open: points('open') },
+        state.sectionId,
+      );
+    });
+    actions.append(again);
+
+    function paint() {
+      paths.forEach((path, i) => {
+        path.setAttribute('class', `part ${roles[i]}`);
+        path.firstChild.textContent = {
+          clothes: 'Klær',
+          other: 'Hud eller gjenstand',
+          open: 'Luft',
+        }[roles[i]];
+      });
+      again.disabled = roles.join() === start;
+    }
+    paint();
+
+    wrap.append(head, help, svg, legend, actions);
+    return wrap;
   }
 
   // The bridge opens the job's own .ai file; the panel cannot start apps.
@@ -1488,6 +1639,7 @@
       setPhoto(msg.bytes, msg.name);
     } else if (msg.type === 'inserted') {
       state.inserted = true;
+      state.sectionId = msg.sectionId || null;
       state.binding = msg.binding || '';
       finish();
     } else if (msg.type === 'error') {

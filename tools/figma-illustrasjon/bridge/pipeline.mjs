@@ -420,6 +420,9 @@ export async function runJob(job, config) {
       darkmode: read('-darkmode'),
       contrast: read('-contrast'),
     },
+    // A person's parts before the clothes are joined, with the skill's
+    // guess of which are clothes, so the panel can let the user correct it.
+    parts: readParts(path.join(dir, `${name}-parts.json`)),
     // The first chosen reference that has the three SVG modes.
     compare: input.compare
       ? references
@@ -541,14 +544,40 @@ async function trace(job, config, { step, log }, { dir, name, draft }) {
       ['clothes', '--clothes'],
       ['open', '--open'],
     ]) {
-      const points = String(input[key] || '').trim().replace(/\s+/g, ' ');
-      if (!points) continue;
-      if (!POINTS.test(points))
+      if (typeof input[key] !== 'string') continue;
+      const points = input[key].trim().replace(/\s+/g, ' ');
+      // An empty clothes list says: no clothes, do not guess. An empty
+      // open list adds nothing.
+      if (!points && key === 'open') continue;
+      if (points && !POINTS.test(points))
         throw new Error(`${key}: skriv punkter som "x,y x,y"`);
       args.push(flag, points);
     }
   await runTrace(job, args, log);
   step('trace', 'done');
+}
+
+// The skill's parts map: { viewBox, parts: [{ id, d, point, role }] }.
+// Missing (an older skill, or not a person) or malformed gives null.
+const ROLES = new Set(['clothes', 'skin', 'object', 'tint', 'open']);
+function readParts(file) {
+  if (!fs.existsSync(file)) return null;
+  try {
+    const map = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const parts = (map.parts || []).filter(
+      p =>
+        typeof p.d === 'string' &&
+        Array.isArray(p.point) &&
+        p.point.length === 2 &&
+        p.point.every(Number.isFinite) &&
+        ROLES.has(p.role),
+    );
+    return parts.length
+      ? { viewBox: map.viewBox || [0, 0, 360, 360], parts }
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 function saveDraft(job, dir, bytes, label) {

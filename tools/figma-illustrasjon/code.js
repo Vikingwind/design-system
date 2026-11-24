@@ -361,7 +361,9 @@ function imageRect(name, bytes, size) {
   return rect;
 }
 
-async function insert(result, draft, check) {
+async function insert(result, draft, check, replace) {
+  // «Spor på nytt» replaces the section of the trace it corrects.
+  const old = replace ? await figma.getNodeByIdAsync(replace) : null;
   const section = figma.createSection();
   section.name = result.name;
 
@@ -389,9 +391,15 @@ async function insert(result, draft, check) {
   }
 
   section.resizeWithoutConstraints(width, height);
-  const center = figma.viewport.center;
-  section.x = Math.round(center.x - width / 2);
-  section.y = Math.round(center.y - height / 2);
+  if (old && old.type === 'SECTION' && !old.removed) {
+    section.x = old.x;
+    section.y = old.y;
+    old.remove();
+  } else {
+    const center = figma.viewport.center;
+    section.x = Math.round(center.x - width / 2);
+    section.y = Math.round(center.y - height / 2);
+  }
   figma.currentPage.selection = [section];
   figma.viewport.scrollAndZoomIntoView([section]);
   return { section, binding };
@@ -430,6 +438,7 @@ figma.ui.onmessage = async msg => {
         msg.result,
         msg.draft,
         msg.check,
+        msg.replace,
       );
       figma.notify(
         `${section.name} er satt inn i tre fargemoduser. ${bindingText(
@@ -440,6 +449,7 @@ figma.ui.onmessage = async msg => {
       figma.ui.postMessage({
         type: 'inserted',
         name: section.name,
+        sectionId: section.id,
         binding: bindingText(binding),
       });
     } else if (msg.type === 'notify') {
