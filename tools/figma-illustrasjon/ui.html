@@ -1510,16 +1510,19 @@
       return path;
     });
 
-    // The trace's own lines on top, so the parts read as the figure.
+    // The trace's own hair and lines on top, so the parts read as the
+    // figure; clicks go through them to the part below.
     const doc = new DOMParser().parseFromString(
       result.svgs.standard,
       'image/svg+xml',
     );
-    const outline = doc.getElementById('Outline');
-    if (outline) {
-      const lines = document.importNode(outline, true);
-      lines.setAttribute('pointer-events', 'none');
-      svg.append(lines);
+    for (const id of ['Ink', 'Outline']) {
+      const group = doc.getElementById(id);
+      if (!group) continue;
+      const copy = document.importNode(group, true);
+      copy.removeAttribute('id');
+      copy.setAttribute('pointer-events', 'none');
+      svg.append(copy);
     }
 
     const legend = document.createElement('div');
