@@ -1362,6 +1362,14 @@
   };
 
   function findingText(f) {
+    // trace-check's size finding: «animal too small: 140 × 142, the
+    // library's animals span 160–256 on their longer side».
+    if (f.kind === 'size') {
+      const m = f.what.match(/too (small|large): (\d+) × (\d+).*?(\d+)–(\d+)/);
+      return m
+        ? `Dyret er for ${m[1] === 'small' ? 'lite' : 'stort'} (${m[2]} × ${m[3]}); bibliotekets dyr er ${m[4]}–${m[5]} på den lengste siden`
+        : f.what;
+    }
     if (f.what.startsWith('paper'))
       return (
         PAPER[f.what] ||
@@ -1371,6 +1379,8 @@
       );
     const thing =
       f.what === 'ink' ? FINDING.ink[f.shape] || 'blekk' : FINDING[f.what];
+    // A finding this panel does not know yet: show the check's own words.
+    if (!thing) return f.what;
     return f.kind === 'missing'
       ? `Mangler ${thing}`
       : `${thing[0].toUpperCase()}${thing.slice(1)} som ikke er i utkastet`;
