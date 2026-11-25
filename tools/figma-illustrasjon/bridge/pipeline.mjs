@@ -423,6 +423,23 @@ export async function runJob(job, config) {
       darkmode: read('-darkmode'),
       contrast: read('-contrast'),
     },
+    // An animal on a disc comes in the library's two versions: with the
+    // disc and no shading on the body, and without the disc with shading.
+    // Null from a skill that writes only the combined file.
+    versions: ['background', 'plain'].every(v =>
+      fs.existsSync(path.join(dir, `${name}-${v}.svg`)),
+    )
+      ? Object.fromEntries(
+          ['background', 'plain'].map(v => [
+            v,
+            {
+              standard: read(`-${v}`),
+              darkmode: read(`-${v}-darkmode`),
+              contrast: read(`-${v}-contrast`),
+            },
+          ]),
+        )
+      : null,
     // A person's parts before the clothes are joined, with the skill's
     // guess of which are clothes, so the panel can let the user correct it.
     parts: readParts(path.join(dir, `${name}-parts.json`)),

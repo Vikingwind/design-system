@@ -367,18 +367,42 @@ async function insert(result, draft, check, replace) {
   const section = figma.createSection();
   section.name = result.name;
 
-  const row = modeFrames(result.name, result.svgs);
-  for (const frame of row) {
+  // An animal on a disc: the library's two versions in two rows, the disc
+  // version («Bear background») first; otherwise the one combined trace.
+  const sets = result.versions
+    ? [
+        [`${result.name} background`, result.versions.background],
+        [result.name, result.versions.plain],
+      ]
+    : [[result.name, result.svgs]];
+  const rows = sets.map(([name, svgs]) => modeFrames(name, svgs));
+  for (const frame of rows.flat()) {
     frame.setPluginData('aiFile', result.ai);
     frame.setPluginData('folder', result.dir);
   }
-  const binding = await bindAll(row, result.kind);
+  let binding = { ok: true, bound: 0, left: [] };
+  for (const row of rows) {
+    const r = await bindAll(row, result.kind);
+    if (!r.ok) binding = r;
+    else if (binding.ok)
+      binding = {
+        ok: true,
+        bound: binding.bound + r.bound,
+        left: [...new Set([...binding.left, ...r.left])],
+      };
+  }
+  const row = rows[0];
   if (draft) row.push(imageRect(`${result.name}-utkast`, draft, row[0]));
   // What the check against the draft found, boxed and numbered as in the panel.
   if (check) row.push(imageRect(`${result.name}-sjekk`, check, row[0]));
   const first = place(section, row, PAD);
   let width = first.width;
   let height = PAD + first.height + PAD;
+  for (const more of rows.slice(1)) {
+    const next = place(section, more, height - PAD + GAP);
+    width = Math.max(width, next.width);
+    height += GAP + next.height;
+  }
 
   if (result.compare && result.compare.svgs) {
     const library = modeFrames(

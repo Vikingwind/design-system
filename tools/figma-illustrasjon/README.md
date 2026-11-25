@@ -91,6 +91,8 @@ Pluginen setter inn en seksjon med de tre fargemodusene på sine flater (hvit, E
 
 **Åpne i Illustrator:** knappen i resultatet åpner jobbens `.ai`-fil i Illustrator, så du kan se sporingen og gjøre etterarbeidet. Broen åpner bare fila jobben laget. Den åpnes ikke av seg selv: hvert dokument som står åpent i Illustrator, gjør neste trace tregere, så lukk fila når du er ferdig.
 
+**To versjoner av dyr:** Et dyr med bakgrunnssirkel kommer i bibliotekets to versjoner, i to rader: øverst `<Navn> background` med sirkel og uten skygger på kroppen, under `<Navn>` uten sirkel og med skyggene. Begge har standard, mørk og kontrast. Med en eldre skill som bare lager den samlede sporingen, blir det én rad som før.
+
 **Fargevariabler:** Pluginen kobler hver farge i de tre rammene til variablene i biblioteket **Tokens-Illustration colors** (samlingen Illustration colors), slik komponentene i Illustration Library er bygd. Biblioteket må være slått på i fila.
 
 | Farge i tracen    | Dyr og objekter   | Personer                                | Transport                                        |
