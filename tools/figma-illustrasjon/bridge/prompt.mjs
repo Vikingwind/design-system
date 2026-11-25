@@ -111,6 +111,10 @@ export function generationPrompt(
         const rest = scoped[2].trim();
         return rest[0].toUpperCase() + rest.slice(1);
       }
+      // A whole sentence without a label, such as the pale garment: it is
+      // about what a figure wears, so people and animals keep it.
+      if (/^[A-Z][\s\S]*\.$/.test(slot.trim()) && /\s/.test(slot))
+        return kind === 'person' || animal ? slot.trim() : '';
       throw new Error(`Ukjent felt i promptmalen: [${slot}]`);
     });
     const plain = filled.replace(
